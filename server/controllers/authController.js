@@ -48,7 +48,7 @@ const register = async (req, res) => {
 };
 
 //User Login Controller
-const login = async (req, res) => {
+const login = async (req, res, next) => {
     try {
         const { email, password } = req.body; //Get email and password from request body
         const userExist = await User.findOne({ email }); //Check user exist by email

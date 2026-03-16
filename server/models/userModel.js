@@ -60,5 +60,15 @@ userSchema.methods.generateToken = async function (){  //userSchema.methods se k
     }
 }
 
+//isValidPassword method to compare password during login
+userSchema.methods.comparePassword = async function(password){
+    try{
+        return bcrypt.compare(password, this.password); //Compare the provided password with the hashed password
+    }catch(error){
+        console.log("Error in comparing password", error);
+    }
+}
+
+//define the model or the collection name 
 const User = mongoose.model('User',userSchema);
 module.exports = User;
