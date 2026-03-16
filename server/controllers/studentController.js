@@ -12,7 +12,7 @@ const createStudent = async (req, res) => {
       department,
     });
 
-    return res.status(201).json(student);
+    return res.status(201).json({message: "Student Created Successfully",student});
   } catch (error) {
     console.error('Error creating student:', error);
     return res.status(500).json({ message: 'Failed to create student' });
@@ -46,7 +46,7 @@ const updateStudent = async (req, res) => {
       return res.status(404).json({ message: 'Student not found' });
     }
 
-    return res.status(200).json(updated);
+    return res.status(200).json({ message: 'Student updated successfully', updated });
   } catch (error) {
     console.error('Error updating student:', error);
     return res.status(500).json({ message: 'Failed to update student' });
