@@ -1,4 +1,4 @@
-const User = require("../models/user-model");
+const User = require("../models/userModel");
 const bcrypt = require('bcryptjs');
 
 const home = async (req, res) => {
@@ -34,8 +34,8 @@ const register = async (req, res) => {
             .json({
                 message: "User Registered Successfully",
                 user: userCreated,
-                // token: await userCreated.generateToken(), //token generate karna hai
-                // userId: userCreated._id.toString(),
+                token: await userCreated.generateToken(), //token generate karna hai
+                userId: userCreated._id.toString(),
 
         //In most cases, user id ko string mein convert karna padta hai bcz mongoose object id hota hai jo ki string nahi hota
         //and it ensures compatibility and consistency across different JWT libraries and systems. It also aligns with common
@@ -48,33 +48,32 @@ const register = async (req, res) => {
 };
 
 //User Login Controller
-// const login = async (req, res) => {
-//   try {
-//     const { email, password } = req.body; //Get email and password from request body
-//     const userExist = await User.findOne({ email }); //Check user exist by email
+const login = async (req, res) => {
+    try {
+        const { email, password } = req.body; //Get email and password from request body
+        const userExist = await User.findOne({ email }); //Check user exist by email
 
-//     if (!userExist) { //If user not found
-//       return res.status(400).json({ message: "Invalid Credentials" });
-//     }
-//     const isPasswordValid = await userExist.comparePassword(password); //Compare password
+        if (!userExist) { //If user not found
+            return res.status(400).json({ message: "Invalid Credentials" });
+        }
+        const isPasswordValid = await userExist.comparePassword(password); //Compare password
 
-//     if(isPasswordValid){
-//       res.status(200).json({
-//         message: "User Logged In Successfully",
-//         //user: user,
-//         token: await userExist.generateToken(),
-//         userId: userExist._id.toString(),
-//       });
-//     }else{
-//       res.status(401).json({ msg: "Invalid email or password" });
-//     }
-    
-//   } catch (error) {
-//     console.error('Login error:', error);
-//     //res.status(500).json({ msg: "Internal Server Error" });
-//     next(error);
-//   }
-// };
+        if(isPasswordValid){
+            res.status(200).json({
+                message: "User Logged In Successfully",
+                //user: user,
+                token: await userExist.generateToken(),
+                userId: userExist._id.toString(),
+            });
+        } else {
+            res.status(401).json({ msg: "Invalid email or password" });
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        //res.status(500).json({ msg: "Internal Server Error" });
+        next(error);
+    }
+};
 
 //To send user data - User Logic
 // const user = async (req, res) => {
@@ -87,4 +86,4 @@ const register = async (req, res) => {
 //   }
 // };
 
-module.exports = { home, register };
+module.exports = { home, register, login };
