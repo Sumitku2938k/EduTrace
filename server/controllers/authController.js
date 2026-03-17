@@ -76,14 +76,14 @@ const login = async (req, res, next) => {
 };
 
 //To send user data - User Logic
-// const user = async (req, res) => {
-//   try {
-//     const userData = req.user;
-//     console.log(userData);
-//     res.status(200).json({ userData });
-//   } catch (error) {
-//     console.log(`Error from the user route ${error}`);
-//   }
-// };
+const getUser = async (req, res) => {
+    try {
+        const userData = req.user;
+        console.log(userData);
+        res.status(200).json({ userData });
+    } catch (error) {
+        console.log(`Error from the user route ${error}`);
+    }
+};
 
-module.exports = { home, register, login };
+module.exports = { home, register, login, getUser };
