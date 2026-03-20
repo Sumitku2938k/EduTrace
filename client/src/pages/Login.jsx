@@ -1,13 +1,16 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
 
 const Login = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const navigate = useNavigate();
 
     const handleSignIn = (e) => {
         e.preventDefault();
-        // handle login logic here
+        // Redirect to dashboard after successful sign in.
+        navigate("/dashboard");
     };
 
     const handleDemo = () => {
@@ -54,23 +57,6 @@ const Login = () => {
                     {/* Sign In Button */}
                     <button type="submit" className="w-full py-3.25 rounded-xl bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-[15px] font-semibold shadow-md shadow-indigo-200 transition-all duration-200 mt-1">Sign In</button>
                 </form>
-
-                {/* Divider */}
-                <div className="flex items-center gap-3 my-5">
-                    <div className="flex-1 h-px bg-[#e5e7eb]" />
-                    <span className="text-[13px] text-[#9ca3af]">or</span>
-                    <div className="flex-1 h-px bg-[#e5e7eb]" />
-                </div>
-
-                {/* Try Demo Button */}
-                <button onClick={handleDemo} className="w-full py-3.25 rounded-xl border border-[#e5e7eb] bg-white hover:bg-[#f9fafb] text-[#374151] text-[15px] font-medium transition-colors duration-150">Try Demo</button>
-
-                {/* Demo Credentials Box */}
-                <div className="mt-5 rounded-xl border border-[#dbeafe] bg-[#eff6ff] px-5 py-4">
-                    <p className="text-[13.5px] font-semibold text-[#1e3a5f] mb-1">Demo Credentials:</p>
-                    <p className="text-[13px] text-[#4b6282]">Email: demo@school.edu</p>
-                    <p className="text-[13px] text-[#4b6282]">Password: demo123</p>
-                </div>
 
             </div>
             <p className="mt-6 mb-2 text-[14px] text-[#6b7280] text-center">Smart attendance system for modern classrooms</p>

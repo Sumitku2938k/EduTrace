@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import AppLayout from "./components/layout/AppLayout";  
@@ -13,18 +13,18 @@ const App = () => {
     <>
       <Router>
         <Routes>
-          <Route path="/" element={<AppLayout />}>
-            <Route
-              index
-              element={<Navigate to="/login" replace />}
-            />
-          </Route>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/attendance" element={<Attendance />} />
-          <Route path="/students" element={<Students />} />
-          <Route path="/analytics" element={<Analytics />} />
           <Route path="/login" element={<Login />} />
-            {/* <Route path="signup" element={<Signup />} /> */}
+
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="attendance" element={<Attendance />} />
+            <Route path="students" element={<Students />} />
+            <Route path="analytics" element={<Analytics />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/login" replace />} />
+          {/* <Route path="signup" element={<Signup />} /> */}
         </Routes>
       </Router>
     </>

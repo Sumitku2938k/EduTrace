@@ -2,8 +2,16 @@ import React from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { LayoutDashboard, Clock, Users, BarChart3, LogOut, GraduationCap } from "lucide-react";
 import "./AppLayout.css";
+import { useNavigate } from "react-router-dom";
 
 const AppLayout = () => {
+    const navigate = useNavigate();
+
+    const handleLogout = () => {
+        // Perform logout logic here
+        navigate("/login");
+    };
+
     return (
         <div className="app-wrapper">
 
@@ -46,7 +54,7 @@ const AppLayout = () => {
 
                 {/* Logout */}
                 <div className="sidebar-logout">
-                    <button className="logout-btn">
+                    <button className="logout-btn" onClick={handleLogout}>
                         <LogOut size={18} />
                         <span>Logout</span>
                     </button>
