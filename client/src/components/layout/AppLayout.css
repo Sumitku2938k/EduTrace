@@ -6,6 +6,17 @@
     background-color: #eef0f5;
 }
 
+.main-content {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #f9fafb;
+}
+
+.page-content {
+    flex: 1;
+}
+
 /* ── Sidebar ─────────────────────────────────────────── */
 .sidebar {
     background-color: #f4f5f7;

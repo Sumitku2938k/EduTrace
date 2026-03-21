@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import DashboardHeader from "../components/dashboard/DashboardHeader";
 
 const attendanceData = [
     { month: "Jan", attendance: 95 },
@@ -56,11 +55,9 @@ export default function Dashboard() {
     const [activeIndex, setActiveIndex] = useState(null);
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans">
-            
-            <DashboardHeader />
+        <div className="bg-gray-50 px-8 py-8 font-sans">
 
-            <main className="max-w-6xl mx-auto px-8 py-8 space-y-8">
+            <main className="max-w-6xl mx-auto space-y-8">
                 {/* Title */}
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>

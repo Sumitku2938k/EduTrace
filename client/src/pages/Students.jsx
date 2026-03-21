@@ -55,7 +55,7 @@ export default function Students() {
   const totalDepartments = new Set(studentsData.map((student) => student.department)).size;
 
   return (
-    <div className="min-h-screen bg-gray-50 px-8 py-8 font-sans">
+    <div className="bg-gray-50 px-8 py-8 font-sans">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Students</h1>
         <p className="mt-1 text-gray-500">Browse the live student directory from the protected backend API</p>

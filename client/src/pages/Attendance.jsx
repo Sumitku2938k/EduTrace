@@ -82,7 +82,7 @@ export default function Attendance() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 px-8 py-8 font-sans">
+    <div className="bg-gray-50 px-8 py-8 font-sans">
       {/* Title */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Daily Attendance</h1>

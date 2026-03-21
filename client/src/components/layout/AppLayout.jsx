@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Clock, Users, BarChart3, LogOut, GraduationCap } from "lucide-react";
 import "./AppLayout.css";
 import { clearAuthSession, getStoredUser } from "../../services/api";
+import Navbar from "../Navbar";
 
 const AppLayout = () => {
     const navigate = useNavigate();
@@ -57,7 +58,10 @@ const AppLayout = () => {
             </aside>
 
             <main className="main-content">
-                <Outlet />
+                <Navbar />
+                <section className="page-content">
+                    <Outlet />
+                </section>
             </main>
         </div>
     );
