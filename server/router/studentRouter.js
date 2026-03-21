@@ -4,13 +4,14 @@ const { createStudent, getStudents, getStudentById, updateStudent, deleteStudent
 const authMiddleware = require('../middlewares/authMiddleware');
 const adminMiddleware = require('../middlewares/adminMiddleware');
 const validate = require('../middlewares/validateMiddleware');
+const { createStudentSchema, updateStudentSchema } = require('../validator/studentValidator');
 
 router.use(authMiddleware);
 
 router.get('/', getStudents);
 router.get('/:id', getStudentById);
-router.post('/', adminMiddleware, validate(createStudentSchema), createStudent);
-router.put('/:id', adminMiddleware, validate(updateStudentSchema), updateStudent);
-router.delete('/:id', adminMiddleware, validate(deleteStudentSchema), deleteStudent);
+router.route('/create').post(adminMiddleware, validate(createStudentSchema), createStudent);
+router.route('/update/:id').patch(adminMiddleware, validate(updateStudentSchema), updateStudent);
+router.route('/delete/:id').delete(adminMiddleware, deleteStudent);
 
 module.exports = router;

@@ -4,27 +4,27 @@ require('dotenv').config();
 
 const connectDB = require('./utils/db');
 const authRouter = require('./router/authRouter');
-const studentRoutes = require('./routes/studentRoutes');
+const studentRouter = require('./router/studentRouter');
+const errorMiddleware = require('./middlewares/errorMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(
-    cors({
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    })
-);
+//Handling cors policy issues
+const corsOptions = {
+    origin: "http://localhost:5173",
+    methods: "GET, POST, PUT, DELETE, PATCH, HEAD",
+    credentials: true,
+};
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 app.use('/api/auth', authRouter);
-app.use('/api/students', studentRoutes);
+app.use('/api/students', studentRouter);
 
-app.use((err, _req, res, _next) => {
-    console.error(err);
-    res.status(err.status || 500).json({
-        message: err.message || 'Internal server error',
-    });
-});
+// Global error handling middleware
+app.use(errorMiddleware);
 
 connectDB()
     .then(() => {
