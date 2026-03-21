@@ -1,89 +1,81 @@
-const User = require("../models/userModel");
-const bcrypt = require('bcryptjs');
-
-const home = async (req, res) => {
-    try {
-        res.send("Hello, World!");
-    } catch (error) {
-        console.log(error);
-    }
-};
-
-//1. Get Registration Data : Retrieve user data from request body (username, email, phone, password).
-//2. Check Existing User : Check if a user with the provided email already exists in the database
-//3. Hash Password : If no existing user is found, hash the provided password for security
-//4. Create New User : If no existing user is found, create a new user with the provided data and hashed password
-//5. Save User to Database : Save the newly created user to the database
-//6. Send Response : Send a success response with the created user data or an error message if the user already exists
+const User = require('../models/userModel');
 
 const register = async (req, res) => {
     try {
-        const { username, email, phone, password } = req.body; //Get user data from request body
+        const { name, email, password, role } = req.body;
 
-        const userExists = await User.findOne({ email }); //Check if user already exists
+        const userExists = await User.findOne({ email });
 
         if (userExists) {
-            return res.status(400).json({ message: "Email already exists" });
+            return res.status(400).json({ message: 'User already exists with this email' });
         }
 
-        const userCreated = await User.create({ username, email, phone, password }); //Create new user
+        const user = await User.create({ name, email, password, role });
+        const token = user.generateToken();
 
-        console.log("Registered User:",req.body); //Log the request body to verify the received data
-        res
-            .status(200)
-            .json({
-                message: "User Registered Successfully",
-                user: userCreated,
-                token: await userCreated.generateToken(), //token generate karna hai
-                userId: userCreated._id.toString(),
-
-        //In most cases, user id ko string mein convert karna padta hai bcz mongoose object id hota hai jo ki string nahi hota
-        //and it ensures compatibility and consistency across different JWT libraries and systems. It also aligns with common
-        //practices in web development where user identifiers are typically represented as strings.
-        }); 
+        return res.status(201).json({
+            message: 'User registered successfully',
+            token,
+            user: {
+                id: user._id.toString(),
+                name: user.name,
+                email: user.email,
+                role: user.role,
+            },
+        });
     } catch (error) {
         console.error('Register error:', error);
-        res.status(500).json({ msg: "Page Not Found" });
+        return res.status(500).json({ message: 'Failed to register user' });
     }
 };
 
-//User Login Controller
 const login = async (req, res, next) => {
     try {
-        const { email, password } = req.body; //Get email and password from request body
-        const userExist = await User.findOne({ email }); //Check user exist by email
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
 
-        if (!userExist) { //If user not found
-            return res.status(400).json({ message: "Invalid Credentials" });
+        if (!user) {
+            return res.status(401).json({ message: 'Invalid email or password' });
         }
-        const isPasswordValid = await userExist.comparePassword(password); //Compare password
 
-        if(isPasswordValid){
-            res.status(200).json({
-                message: "User Logged In Successfully",
-                //user: user,
-                token: await userExist.generateToken(),
-                userId: userExist._id.toString(),
-            });
-        } else {
-            res.status(401).json({ msg: "Invalid email or password" });
+        const isPasswordValid = await user.comparePassword(password);
+
+        if (!isPasswordValid) {
+            return res.status(401).json({ message: 'Invalid email or password' });
         }
+
+        const token = user.generateToken();
+
+        return res.status(200).json({
+            message: 'Login successful',
+            token,
+            user: {
+                id: user._id.toString(),
+                name: user.name,
+                email: user.email,
+                role: user.role,
+            },
+        });
     } catch (error) {
         console.error('Login error:', error);
-        //res.status(500).json({ msg: "Internal Server Error" });
-        next(error);
+        return next(error);
     }
 };
 
-//To send user data - User Logic
 const getUser = async (req, res) => {
     try {
-        const userData = req.user;
-        console.log(userData);
-        res.status(200).json({ userData });
+        return res.status(200).json({
+            user: {
+                id: req.user._id.toString(),
+                name: req.user.name,
+                email: req.user.email,
+                role: req.user.role,
+            },
+        });
     } catch (error) {
-        console.log(`Error from the user route ${error}`);
+        console.error('Get user error:', error);
+        return res.status(500).json({ message: 'Failed to fetch user' });
     }
 };
 
-module.exports = { home, register, login, getUser };
+module.exports = { register, login, getUser };

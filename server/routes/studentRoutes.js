@@ -1,18 +1,19 @@
 const express = require('express');
-const { createStudent, getStudents, updateStudent, deleteStudent } = require('../controllers/studentController');
+const {
+    createStudent,
+    getStudents,
+    updateStudent,
+    deleteStudent,
+} = require('../controllers/studentController');
+const { authMiddleware, authorizeRoles } = require('../middlewares/authMiddleware');
+
 const router = express.Router();
 
-// POST   /api/students
-router.post('/', createStudent);
+router.use(authMiddleware);
 
-// GET    /api/students
 router.get('/', getStudents);
-
-// PUT    /api/students/:id
-router.put('/:id', updateStudent);
-
-// DELETE /api/students/:id
-router.delete('/:id', deleteStudent);
+router.post('/', authorizeRoles('admin'), createStudent);
+router.put('/:id', authorizeRoles('admin'), updateStudent);
+router.delete('/:id', authorizeRoles('admin'), deleteStudent);
 
 module.exports = router;
-

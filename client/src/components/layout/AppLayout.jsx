@@ -1,35 +1,31 @@
 import React from "react";
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Clock, Users, BarChart3, LogOut, GraduationCap } from "lucide-react";
 import "./AppLayout.css";
-import { useNavigate } from "react-router-dom";
+import { clearAuthSession, getStoredUser } from "../../services/api";
 
 const AppLayout = () => {
     const navigate = useNavigate();
+    const user = getStoredUser();
 
     const handleLogout = () => {
-        // Perform logout logic here
+        clearAuthSession();
         navigate("/login");
     };
 
     return (
         <div className="app-wrapper">
-
-            {/* Sidebar */}
             <aside className="sidebar">
-
-                {/* Logo Section */}
                 <div className="sidebar-logo">
                     <div className="sidebar-logo-icon">
                         <GraduationCap size={20} />
                     </div>
                     <div>
                         <h1 className="sidebar-logo-title">EduTrace</h1>
-                        <p className="sidebar-logo-subtitle">Smart System</p>
+                        <p className="sidebar-logo-subtitle">{user?.role ? `${user.role} access` : "Smart System"}</p>
                     </div>
                 </div>
 
-                {/* Nav Links */}
                 <nav className="sidebar-nav">
                     <NavLink to="/dashboard" className={({ isActive }) => `nav-link${isActive ? " active" : ""}`}>
                         <LayoutDashboard size={18} />
@@ -52,7 +48,6 @@ const AppLayout = () => {
                     </NavLink>
                 </nav>
 
-                {/* Logout */}
                 <div className="sidebar-logout">
                     <button className="logout-btn" onClick={handleLogout}>
                         <LogOut size={18} />
@@ -61,7 +56,6 @@ const AppLayout = () => {
                 </div>
             </aside>
 
-            {/* Main Content */}
             <main className="main-content">
                 <Outlet />
             </main>
