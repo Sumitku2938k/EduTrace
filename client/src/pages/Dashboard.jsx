@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import DashboardStatCard from "../components/dashboard/DashboardStatCard";
+import { useNavigate } from "react-router-dom";
 
 const attendanceData = [
     { month: "Jan", attendance: 95 },
@@ -100,7 +101,8 @@ const statCards = [
 
 export default function Dashboard() {
     const [activeIndex, setActiveIndex] = useState(null);
-
+    const navigate = useNavigate();
+    
     return (
         <div className="bg-gray-50 px-8 py-8 font-sans">
 
@@ -204,7 +206,7 @@ export default function Dashboard() {
                             <h2 className="text-lg font-bold text-gray-900">Recent Alerts</h2>
                             <p className="text-sm text-gray-400">Students needing attention</p>
                         </div>
-                        <button className="text-sm text-gray-500 border border-gray-200 rounded-xl px-4 py-1.5 hover:bg-gray-50 transition-colors">View All</button>
+                        <button onClick={() => {navigate('/analytics')}} className="text-sm text-gray-500 cursor-pointer border border-gray-200 rounded-xl px-4 py-1.5 hover:bg-gray-50 transition-colors">View All</button>
                     </div>
                     <div className="space-y-3">
                         {alerts.map((alert) => (
