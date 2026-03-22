@@ -112,7 +112,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Stat Cards */}
-                <div className="grid grid-cols-1 gap-6 p-6 xl:grid-cols-5">
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     {statCards.map((card) => (
                         <DashboardStatCard
                             key={card.label}
