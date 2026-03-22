@@ -4,6 +4,7 @@ import { LayoutDashboard, Clock, Users, BarChart3, LogOut, GraduationCap } from 
 import "./AppLayout.css";
 import { clearAuthSession, getStoredUser } from "../../services/api";
 import Navbar from "../Navbar";
+import { toast } from 'react-toastify';
 
 const AppLayout = () => {
     const navigate = useNavigate();
@@ -12,6 +13,7 @@ const AppLayout = () => {
     const handleLogout = () => {
         clearAuthSession();
         navigate("/login");
+        toast.success("Logout successful!");
     };
 
     return (
