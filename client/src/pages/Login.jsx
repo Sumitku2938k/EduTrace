@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
 import { loginUser } from "../services/api";
+import { toast } from 'react-toastify';
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -17,9 +18,11 @@ const Login = () => {
 
         try {
             await loginUser({ email, password });
+            toast.success("Login successful!");
             navigate("/dashboard");
         } catch (err) {
             setError(err.response?.data?.message || "Unable to sign in. Please try again.");
+            toast.error("Login failed. Please check your credentials.");
         } finally {
             setIsSubmitting(false);
         }
