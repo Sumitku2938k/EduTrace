@@ -43,8 +43,8 @@ export const AuthProvider = ({ children }) => {
 
             if (response.ok) {
                 const data = await response.json();
-                setUser(data.userData);
-                console.log("Authenticated user data : ", data.userData);
+                setUser(data.user);
+                console.log("Authenticated user data : ", data.user);
             } else {
                 console.error("Failed to fetch user data");
             }
