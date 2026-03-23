@@ -18,8 +18,14 @@ export default function Students() {
       setError("");
 
       try {
-        const students = await fetchStudents(authorizationToken);
-        setStudentsData(students);
+        const response = await fetchStudents(authorizationToken);
+        const normalizedStudents = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.students)
+            ? response.students
+            : [];
+
+        setStudentsData(normalizedStudents);
       } catch (err) {
         const statusCode = err.response?.status || err.status || 500;
         const errorMessage = err.response?.data?.message || err.message || "Unable to load students right now.";
