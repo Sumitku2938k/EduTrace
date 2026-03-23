@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchStudents } from "../services/api";
 import { useAuth } from "../utils/auth";
+import StudentForm from "../components/StudentForm";
 
 export default function Students() {
   const [studentsData, setStudentsData] = useState([]);
@@ -11,6 +12,21 @@ export default function Students() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { authorizationToken } = useAuth();
+  const handleStudentAdded = async (student) => {
+    if (!student || !student._id) {
+      return;
+    }
+
+    setStudentsData((previous) => {
+      const alreadyExists = previous.some((item) => item._id === student._id);
+      if (alreadyExists) {
+        return previous;
+      }
+
+      return [student, ...previous];
+    });
+    setError("");
+  };
 
   useEffect(() => {
     const loadStudents = async () => {
@@ -67,6 +83,10 @@ export default function Students() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Students</h1>
         <p className="mt-1 text-gray-500">Browse the live student directory from the protected backend API</p>
+      </div>
+
+      <div className="mb-8">
+        <StudentForm onStudentCreated={handleStudentAdded} />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">

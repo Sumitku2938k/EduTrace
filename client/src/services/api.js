@@ -60,35 +60,41 @@ export const getStudentById = async (id, token) => {
 };
 
 export const createStudent = async (formData, token) => {
-    const res = await fetch(`${BASE_URL}/students`, {
+    const response = await fetch(`${BASE_URL}/students/create`, {
         method: "POST",
         headers: {
+            "Content-Type": "application/json",
             Authorization: `${token}`
         },
-        body: formData
+        body: JSON.stringify(formData)
     });
 
-    if (!res.ok) {
-        throw new Error("Student creation failed");
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Student creation failed");
     }
 
-    return res.json();
+    return data;
 };
 
 export const updateStudent = async (id, formData, token) => {
-    const res = await fetch(`${BASE_URL}/students/${id}`, {
-        method: "PATCH",  
+    const response = await fetch(`${BASE_URL}/students/update/${id}`, {
+        method: "PATCH",
         headers: {
+            "Content-Type": "application/json",
             Authorization: `${token}`
         },
-        body: formData
+        body: JSON.stringify(formData)
     });
 
-    if (!res.ok) {
-        throw new Error("Student update failed");
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Student update failed");
     }
 
-    return res.json();
+    return data;
 };
 
 export const deleteStudentById = async (id, token) => {
