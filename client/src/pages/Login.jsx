@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GraduationCap } from "lucide-react";
 import { loginUser } from "../services/api";
+import { useAuth } from "../utils/auth";
 import { toast } from 'react-toastify';
 
 const Login = () => {
@@ -10,18 +11,29 @@ const Login = () => {
     const [error, setError] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
+    const { storeTokenInLS, storeUserInLS } = useAuth();
 
     const handleSignIn = async (e) => {
         e.preventDefault();
         setError("");
         setIsSubmitting(true);
-
+        
+        const user = { email, password };
+        console.log("User logging in: ", user);
+        //Handling the form submission
         try {
-            await loginUser({ email, password });
-            toast.success("Login successful!");
-            navigate("/dashboard");
-        } catch (err) {
-            setError(err.response?.data?.message || "Unable to sign in. Please try again.");
+            const res_data = await loginUser(user);
+            console.log("Response from Server while login: ", res_data);
+            // Store token and user data (assuming res_data contains token and user object)
+            // Adjust 'res_data.token' and 'res_data.user' based on your actual API response
+            storeTokenInLS(res_data.token);
+            storeUserInLS(res_data.user);
+                
+            toast.success("Login Successful");
+            navigate("/"); // Redirect to home page after successful login
+        } catch (error) {
+            console.log("Login Error: ", error);
+            setError(error.message || "Unable to sign in. Please try again.");
             toast.error("Login failed. Please check your credentials.");
         } finally {
             setIsSubmitting(false);

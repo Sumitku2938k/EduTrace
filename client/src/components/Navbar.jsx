@@ -1,8 +1,8 @@
 import React from "react";
-import { getStoredUser } from "../services/api";
+import { useAuth } from "../utils/auth";
 
 const Navbar = () => {
-    const user = getStoredUser();
+    const { user } = useAuth();
     const displayName = user?.name || user?.fullName || user?.username || user?.email?.split("@")[0] || "Teacher";
     const roleLabel = user?.role || "Teacher";
 

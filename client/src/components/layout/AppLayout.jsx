@@ -2,16 +2,16 @@ import React from "react";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Clock, Users, BarChart3, LogOut, GraduationCap } from "lucide-react";
 import "./AppLayout.css";
-import { clearAuthSession, getStoredUser } from "../../services/api";
+import { useAuth } from "../../utils/auth";
 import Navbar from "../Navbar";
 import { toast } from 'react-toastify';
 
 const AppLayout = () => {
     const navigate = useNavigate();
-    const user = getStoredUser();
+    const { user, logout } = useAuth();
 
     const handleLogout = () => {
-        clearAuthSession();
+        logout();
         navigate("/login");
         toast.success("Logout successful!");
     };

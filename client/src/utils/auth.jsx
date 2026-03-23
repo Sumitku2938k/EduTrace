@@ -1,22 +1,21 @@
 import { createContext, useContext, useState } from "react";
 import { useEffect } from "react";
-import { getStoredToken, getStoredUser, setAuthSession, clearAuthSession, fetchCurrentUser } from "../services/api";
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-    const [token, setToken] = useState(getStoredToken());
-    const [user, setUser] = useState(getStoredUser());
+    const [token, setToken] = useState(localStorage.getItem("token"));
+    const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")) || null);
     const authorizationToken = `Bearer ${token}`;
 
     //Store token in local storage
     const storeTokenInLS = (serverToken) => {
         setToken(serverToken);
-        setAuthSession({ token: serverToken });
+        localStorage.setItem("token", serverToken);
     };
     //Store user data in local storage
     const storeUserInLS = (serverUser) => {
         setUser(serverUser);
-        setAuthSession({ user: serverUser });
+        localStorage.setItem("user", JSON.stringify(serverUser));
     };
 
     let isLoggedIn = !!token; //if token is present then true else false
@@ -24,7 +23,8 @@ export const AuthProvider = ({ children }) => {
 
     //Tackling the Logout functionality
     const logout = () => {
-        clearAuthSession();
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
         setToken(null);
         setUser(null);
     };
@@ -34,12 +34,22 @@ export const AuthProvider = ({ children }) => {
         try {
             if (!token) return;
 
-            const userData = await fetchCurrentUser();
-            setUser(userData);
-            console.log("Authenticated user data : ", userData);
+            const response = await fetch(`http://localhost:5000/api/auth/user`, {
+                method: "GET",
+                headers: {
+                    Authorization: authorizationToken,
+                },
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                setUser(data.userData);
+                console.log("Authenticated user data : ", data.userData);
+            } else {
+                console.error("Failed to fetch user data");
+            }
         } catch (error) {
             console.error("Error in fetching user data : ", error);
-            logout();
         }
     }
 

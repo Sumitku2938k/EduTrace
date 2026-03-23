@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchStudents } from "../services/api";
+import { useAuth } from "../utils/auth";
 
 export default function Students() {
   const [studentsData, setStudentsData] = useState([]);
@@ -9,6 +10,7 @@ export default function Students() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { authorizationToken } = useAuth();
 
   useEffect(() => {
     const loadStudents = async () => {
@@ -16,30 +18,30 @@ export default function Students() {
       setError("");
 
       try {
-        const students = await fetchStudents();
+        const students = await fetchStudents(authorizationToken);
         setStudentsData(students);
       } catch (err) {
-        const status = err.response?.status;
-        const message = err.response?.data?.message;
+        const statusCode = err.response?.status || err.status || 500;
+        const errorMessage = err.response?.data?.message || err.message || "Unable to load students right now.";
 
-        if (status === 401) {
+        if (statusCode === 401) {
           navigate("/login");
           return;
         }
 
-        if (status === 403) {
-          setError(message || "You do not have permission to view students.");
+        if (statusCode === 403) {
+          setError(errorMessage || "You do not have permission to view students.");
           return;
         }
 
-        setError(message || "Unable to load students right now.");
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
     };
 
     loadStudents();
-  }, [navigate]);
+  }, [navigate, authorizationToken]);
 
   const filtered = useMemo(() => {
     return studentsData.filter((student) => {

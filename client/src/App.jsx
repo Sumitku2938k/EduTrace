@@ -6,16 +6,16 @@ import Dashboard from "./pages/Dashboard";
 import Attendance from "./pages/Attendance";
 import Students from "./pages/Students";
 import Analytics from "./pages/Analytics";
-import { getStoredToken } from "./services/api";
+import { useAuth } from "./utils/auth";
 
 const ProtectedRoute = ({ children }) => {  // This component checks if the user is authenticated before allowing access to protected routes
-  const token = getStoredToken();
-  return token ? children : <Navigate to="/login" replace />; // If no token is found, the user is redirected to the login page
+  const { isLoggedIn } = useAuth();
+  return isLoggedIn ? children : <Navigate to="/login" replace />; // If no token is found, the user is redirected to the login page
 };
 
 const PublicOnlyRoute = ({ children }) => { // This component prevents authenticated users from accessing routes meant for unauthenticated users (like the login page)
-  const token = getStoredToken();
-  return token ? <Navigate to="/dashboard" replace /> : children; // If a token is found, the user is redirected to the dashboard, otherwise they can access the public route
+  const { isLoggedIn } = useAuth();
+  return isLoggedIn ? <Navigate to="/dashboard" replace /> : children; // If a token is found, the user is redirected to the dashboard, otherwise they can access the public route
 };
 
 const App = () => {
