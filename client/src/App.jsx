@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Attendance from "./pages/Attendance";
 import Students from "./pages/Students";
 import Analytics from "./pages/Analytics";
+import StudentDetail from "./pages/StudentDetail";
 import { useAuth } from "./utils/auth";
 
 const ProtectedRoute = ({ children }) => {  // This component checks if the user is authenticated before allowing access to protected routes
@@ -43,6 +44,7 @@ const App = () => {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="students" element={<Students />} />
+          <Route path="students/:id" element={<StudentDetail />} />
           <Route path="analytics" element={<Analytics />} />
         </Route>
 

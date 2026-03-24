@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, } from "recharts";
+import { useNavigate, useParams } from "react-router-dom";
 
 // ── Sample Data ────────────────────────────────────────────────────────────────
 const studentData = {
@@ -82,8 +83,11 @@ function StatCard({ label, children, subtitle }) {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function StudentDetail({ student = studentData, onBack }) {
+export default function StudentDetail({ student = studentData }) {
   const [hoveredBar, setHoveredBar] = useState(null);
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const studentId = id || student.id;
 
   return (
     <div
@@ -103,7 +107,7 @@ export default function StudentDetail({ student = studentData, onBack }) {
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "36px" }}>
         <button
-          onClick={onBack}
+          onClick={() => navigate("/students")}
           style={{
             background: "none",
             border: "none",
@@ -131,7 +135,7 @@ export default function StudentDetail({ student = studentData, onBack }) {
           >
             {student.name}
           </h1>
-          <p style={{ margin: 0, fontSize: "14px", color: "#6B7280" }}>ID: {student.id}</p>
+          <p style={{ margin: 0, fontSize: "14px", color: "#6B7280" }}>ID: {studentId}</p>
         </div>
       </div>
 
@@ -318,7 +322,7 @@ export default function StudentDetail({ student = studentData, onBack }) {
           <div>
             <p style={{ margin: "0 0 4px 0", fontSize: "13px", color: "#6B7280" }}>Student ID</p>
             <p style={{ margin: 0, fontSize: "15px", color: "#111827", fontWeight: 500 }}>
-              {student.id}
+              {studentId}
             </p>
           </div>
           <div>
