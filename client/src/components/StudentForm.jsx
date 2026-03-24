@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { createStudent } from "../services/api";
 import { useAuth } from "../utils/auth";
+import { toast } from "react-toastify";
 
 const initialFormState = {
     name: "",
@@ -12,10 +13,9 @@ const initialFormState = {
 const initialStatus = {
     loading: false,
     error: "",
-    success: "",
 };
 
-export default function StudentForm({ onStudentCreated }) {
+export default function StudentForm({ onStudentCreated, onCancel }) {
     const [formState, setFormState] = useState(initialFormState);
     const [status, setStatus] = useState(initialStatus);
     const { authorizationToken, user } = useAuth();
@@ -34,12 +34,12 @@ export default function StudentForm({ onStudentCreated }) {
         event.preventDefault();
 
         if (!isAdmin) {
-            setStatus({ loading: false, error: "Only admins can add students.", success: "" });
+            setStatus({ loading: false, error: "Only admins can add students." });
             return;
         }
 
         if (!isFormComplete) {
-            setStatus({ loading: false, error: "Please complete every field before submitting.", success: "" });
+            setStatus({ loading: false, error: "Please complete every field before submitting." });
             return;
         }
 
@@ -57,13 +57,14 @@ export default function StudentForm({ onStudentCreated }) {
             const nextStudent = data.student || data;
 
             setFormState(initialFormState);
-            setStatus({ loading: false, error: "", success: data.message || "Student added successfully." });
+            setStatus(initialStatus);
             await onStudentCreated?.(nextStudent);
+            toast.success("Student has been added");
+            onCancel?.();
         } catch (error) {
             setStatus({
                 loading: false,
                 error: error.message || "Unable to add the student right now.",
-                success: "",
             });
         }
     };
@@ -127,13 +128,22 @@ export default function StudentForm({ onStudentCreated }) {
                 </div>
 
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                    <button
-                        type="submit"
-                        disabled={status.loading || !isAdmin || !isFormComplete}
-                        className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-blue-500 to-indigo-500 px-6 py-2.5 text-sm font-semibold text-white transition duration-150 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                        {status.loading ? "Saving..." : "Add student"}
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <button
+                            type="submit"
+                            disabled={status.loading || !isAdmin || !isFormComplete}
+                            className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-blue-500 to-indigo-500 px-6 py-2.5 text-sm font-semibold text-white transition duration-150 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {status.loading ? "Saving..." : "Add student"}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onCancel}
+                            className="inline-flex items-center justify-center rounded-2xl border border-gray-200 px-6 py-2.5 text-sm font-semibold text-gray-600 transition duration-150 hover:bg-gray-50"
+                        >
+                            Cancel
+                        </button>
+                    </div>
                     <p className="text-xs text-gray-500">
                         {isAdmin ? "All fields are required." : "Only admins can add students."}
                     </p>
@@ -142,11 +152,6 @@ export default function StudentForm({ onStudentCreated }) {
                 {status.error && (
                     <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-2 text-sm text-red-600">
                         {status.error}
-                    </p>
-                )}
-                {status.success && (
-                    <p className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-                        {status.success}
                     </p>
                 )}
             </form>

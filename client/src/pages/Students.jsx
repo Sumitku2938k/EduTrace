@@ -8,10 +8,12 @@ export default function Students() {
   const [studentsData, setStudentsData] = useState([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { authorizationToken } = useAuth();
+
   const handleStudentAdded = async (student) => {
     if (!student || !student._id) {
       return;
@@ -26,6 +28,8 @@ export default function Students() {
       return [student, ...previous];
     });
     setError("");
+    setShowAddForm(false);
+    navigate("/students");
   };
 
   useEffect(() => {
@@ -81,13 +85,30 @@ export default function Students() {
   return (
     <div className="bg-gray-50 px-8 py-8 font-sans">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Students</h1>
-        <p className="mt-1 text-gray-500">Browse the live student directory from the protected backend API</p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Students</h1>
+            <p className="mt-1 text-gray-500">Browse the live student directory from the protected backend API</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAddForm((previous) => !previous)}
+            className="inline-flex items-center justify-center rounded-2xl bg-linear-to-r from-blue-500 to-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:from-blue-600 hover:to-indigo-600"
+          >
+            {showAddForm ? "Close form" : "Add student"}
+          </button>
+        </div>
       </div>
 
-      <div className="mb-8">
-        <StudentForm onStudentCreated={handleStudentAdded} />
-      </div>
+      {showAddForm ? (
+        <div className="mb-8">
+          <StudentForm
+            onStudentCreated={handleStudentAdded}
+            onCancel={() => setShowAddForm(false)}
+          />
+        </div>
+      ) : null}
 
       <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-gray-100 bg-white px-8 py-6 shadow-sm">
