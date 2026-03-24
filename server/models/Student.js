@@ -26,7 +26,15 @@ const studentSchema = new mongoose.Schema(
     },
     {
         timestamps: { createdAt: true, updatedAt: false },
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true },
     }
 );
+
+studentSchema.virtual('attendanceRecords', {
+    ref: 'Attendance',
+    localField: '_id',
+    foreignField: 'studentId',
+});
 
 module.exports = mongoose.model('Student', studentSchema);

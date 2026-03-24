@@ -166,7 +166,7 @@ export default function Students() {
               filtered.map((student) => (
                 <div
                   key={student._id}
-                  onClick={() => navigate(`/students/${student._id}`)}
+                  onClick={() => setSelectedId(selectedId === student._id ? null : student._id)}
                   className={`cursor-pointer rounded-2xl border px-6 py-5 shadow-sm transition-all hover:shadow-md ${
                     selectedId === student._id ? "border-blue-300 bg-blue-50" : "border-gray-100 bg-white"
                   }`}
