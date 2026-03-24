@@ -118,7 +118,7 @@ export default function Students() {
         <div className="rounded-2xl border border-gray-100 bg-white px-8 py-6 shadow-sm">
           <p className="text-sm font-medium text-gray-500">Departments</p>
           <p className="mt-1 text-4xl font-bold text-gray-900">{totalDepartments}</p>
-        </div>
+        </div>  
         <div className="rounded-2xl border border-gray-100 bg-white px-8 py-6 shadow-sm">
           <p className="text-sm font-medium text-gray-500">Results Shown</p>
           <p className="mt-1 text-4xl font-bold text-gray-900">{filtered.length}</p>
