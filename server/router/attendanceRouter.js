@@ -10,8 +10,8 @@ const adminMiddleware = require('../middlewares/adminMiddleware');
 
 router.use(authMiddleware);
 
-router.get('/date/:date', getAttendanceByDate);
+router.get('/', getAttendanceByDate);
 router.get('/student/:studentId', getAttendanceByStudent);
-router.post('/save', adminMiddleware, saveAttendanceByDate);
+router.post('/', adminMiddleware, saveAttendanceByDate);
 
 module.exports = router;

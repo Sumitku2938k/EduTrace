@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Attendance = require('../models/AttendanceModel');
+const Student = require('../models/Student');
 
 const normalizeDate = (value) => {
     const parsedDate = new Date(value);
@@ -33,9 +34,22 @@ const saveAttendanceByDate = async (req, res) => {
             return res.status(400).json({ message: 'Each record must include a valid studentId and status' });
         }
 
+        const hasInvalidStudentId = records.some((record) => !mongoose.Types.ObjectId.isValid(record.studentId));
+        if (hasInvalidStudentId) {
+            return res.status(400).json({ message: 'Each record must include a valid student id' });
+        }
+
         const uniqueStudentIds = new Set(records.map((record) => String(record.studentId)));
         if (uniqueStudentIds.size !== records.length) {
             return res.status(400).json({ message: 'Duplicate student attendance is not allowed for the same date' });
+        }
+
+        const existingStudentsCount = await Student.countDocuments({
+            _id: { $in: [...uniqueStudentIds] },
+        });
+
+        if (existingStudentsCount !== uniqueStudentIds.size) {
+            return res.status(400).json({ message: 'One or more students were not found' });
         }
 
         const attendance = await Attendance.findOneAndUpdate(
@@ -65,10 +79,10 @@ const saveAttendanceByDate = async (req, res) => {
 
 const getAttendanceByDate = async (req, res) => {
     try {
-        const normalizedDate = normalizeDate(req.params.date);
+        const normalizedDate = normalizeDate(req.query.date);
 
         if (!normalizedDate) {
-            return res.status(400).json({ message: 'Please provide a valid date' });
+            return res.status(400).json({ message: 'Please provide a valid date in query params' });
         }
 
         const attendance = await Attendance.findOne({ date: normalizedDate })
