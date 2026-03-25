@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Attendance = require('../models/attendanceModel');
+const Attendance = require('../models/AttendanceModel');
 
 const normalizeDate = (value) => {
     const parsedDate = new Date(value);
