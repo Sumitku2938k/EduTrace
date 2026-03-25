@@ -30,11 +30,11 @@ const studentSchema = new mongoose.Schema(
         toObject: { virtuals: true },
     }
 );
-
+// Virtual field to populate attendance records for a student
 studentSchema.virtual('attendanceRecords', {
     ref: 'Attendance',
     localField: '_id',
-    foreignField: 'studentId',
+    foreignField: 'records.studentId',
 });
 
 module.exports = mongoose.model('Student', studentSchema);
