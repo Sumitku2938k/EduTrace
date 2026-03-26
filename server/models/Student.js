@@ -31,7 +31,7 @@ const studentSchema = new mongoose.Schema(
     }
 );
 // Virtual field to populate attendance records for a student
-studentSchema.virtual('attendanceRecords', {
+studentSchema.virtual('attendanceRecords', { //Student → uske attendance records fetch kar sakte ho
     ref: 'Attendance',
     localField: '_id',
     foreignField: 'records.studentId',

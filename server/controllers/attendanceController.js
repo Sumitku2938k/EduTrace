@@ -26,7 +26,7 @@ const saveAttendanceByDate = async (req, res) => {
             return res.status(400).json({ message: 'Please provide at least one attendance record' });
         }
 
-        const invalidRecord = records.find((record) => {
+        const invalidRecord = records.find((record) => { //studentId ya status missing hai, ya status valid nahi hai
             return !record.studentId || !['Present', 'Absent', 'Late'].includes(record.status);
         });
 
@@ -44,6 +44,7 @@ const saveAttendanceByDate = async (req, res) => {
             return res.status(400).json({ message: 'Duplicate student attendance is not allowed for the same date' });
         }
 
+        // Check if all studentIds exist in the database
         const existingStudentsCount = await Student.countDocuments({
             _id: { $in: [...uniqueStudentIds] },
         });
@@ -130,8 +131,4 @@ const getAttendanceByStudent = async (req, res) => {
     }
 };
 
-module.exports = {
-    saveAttendanceByDate,
-    getAttendanceByDate,
-    getAttendanceByStudent,
-};
+module.exports = { saveAttendanceByDate, getAttendanceByDate, getAttendanceByStudent };

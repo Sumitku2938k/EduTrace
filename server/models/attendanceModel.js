@@ -27,7 +27,7 @@ const attendanceSchema = new mongoose.Schema(
             unique: true,
             set: (value) => {
                 const parsedDate = new Date(value);
-                parsedDate.setHours(0, 0, 0, 0);
+                parsedDate.setHours(0, 0, 0, 0); //same date ke multiple docs ban jaate hain, isliye time ko zero kar diya
                 return parsedDate;
             },
         },
@@ -36,8 +36,8 @@ const attendanceSchema = new mongoose.Schema(
             default: [],
             validate: {
                 validator: (records) => { 
-                    const studentIds = records.map((record) => String(record.studentId));
-                    return new Set(studentIds).size === studentIds.length;
+                    const studentIds = records.map((record) => String(record.studentId)); 
+                    return new Set(studentIds).size === studentIds.length; //same student ek hi date me 2 baar nahi aa sakta
                 },
                 message: 'A student can only have one attendance record for a given date',
             },
@@ -48,6 +48,6 @@ const attendanceSchema = new mongoose.Schema(
     }
 );
 
-attendanceSchema.index({ date: 1 }, { unique: true });
+attendanceSchema.index({ date: 1 }, { unique: true }); //Fast search by date + duplicate prevention
 
 module.exports = mongoose.model('Attendance', attendanceSchema);
