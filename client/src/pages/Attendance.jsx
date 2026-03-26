@@ -11,6 +11,14 @@ const STATUS_STYLES = {
 
 const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+const sortByRollNo = (students) =>
+  [...students].sort((firstStudent, secondStudent) =>
+    firstStudent.rollNo.localeCompare(secondStudent.rollNo, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
+  );
+
 export default function Attendance() {
   const today = new Date().toISOString().split("T")[0];
   const [date, setDate] = useState(today);
@@ -29,13 +37,15 @@ export default function Attendance() {
       try {
         const response = await fetchStudents(authorizationToken);
         const normalizedStudents = Array.isArray(response?.students)
-          ? response.students.map((student) => ({
-              id: student._id,
-              name: student.name,
-              rollNo: student.rollNo,
-              status: null,
-              time: null,
-            }))
+          ? sortByRollNo(
+              response.students.map((student) => ({
+                id: student._id,
+                name: student.name,
+                rollNo: student.rollNo,
+                status: null,
+                time: null,
+              }))
+            )
           : [];
 
         setStudents(normalizedStudents);
@@ -200,7 +210,7 @@ export default function Attendance() {
             <table className="w-full text-left">
               <thead>
                 <tr className="border-b border-gray-100">
-                  {["Student Name", "Student ID", "Time", "Status", "Action"].map((heading) => (
+                  {["Student Name", "Roll No", "Time", "Status", "Action"].map((heading) => (
                     <th key={heading} className="pr-4 pb-3 text-sm font-bold text-gray-700">
                       {heading}
                     </th>
@@ -262,19 +272,19 @@ export default function Attendance() {
       <div className="flex flex-wrap gap-3">
         <button
           onClick={markAllPresent}
-          className="rounded-xl bg-blue-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700"
+          className="rounded-xl bg-blue-600 px-6 py-2.5 cursor-pointer font-semibold text-white transition-colors hover:bg-blue-700"
         >
           Mark All Present
         </button>
         <button
           onClick={submitAttendance}
-          className="rounded-xl bg-emerald-600 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-emerald-700"
+          className="rounded-xl bg-emerald-600 px-6 py-2.5 cursor-pointer font-semibold text-white transition-colors hover:bg-emerald-700"
         >
           Submit Attendance
         </button>
         <button
           onClick={exportCSV}
-          className="rounded-xl border border-gray-200 bg-white px-6 py-2.5 font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+          className="rounded-xl border border-gray-200 bg-white px-6 py-2.5 cursor-pointer font-semibold text-gray-700 transition-colors hover:bg-gray-50"
         >
           Export to CSV
         </button>

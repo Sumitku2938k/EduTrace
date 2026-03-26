@@ -4,6 +4,14 @@ import { fetchStudents } from "../services/api";
 import { useAuth } from "../utils/auth";
 import StudentForm from "../components/StudentForm";
 
+const sortByRollNo = (students) =>
+  [...students].sort((firstStudent, secondStudent) =>
+    firstStudent.rollNo.localeCompare(secondStudent.rollNo, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    })
+  );
+
 export default function Students() {
   const [studentsData, setStudentsData] = useState([]);
   const [search, setSearch] = useState("");
@@ -25,7 +33,7 @@ export default function Students() {
         return previous;
       }
 
-      return [student, ...previous];
+      return sortByRollNo([student, ...previous]);
     });
     setError("");
     setShowAddForm(false);
@@ -40,9 +48,9 @@ export default function Students() {
       try {
         const response = await fetchStudents(authorizationToken);
         const normalizedStudents = Array.isArray(response)
-          ? response
+          ? sortByRollNo(response)
           : Array.isArray(response?.students)
-            ? response.students
+            ? sortByRollNo(response.students)
             : [];
 
         setStudentsData(normalizedStudents);
