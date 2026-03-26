@@ -111,3 +111,43 @@ export const deleteStudentById = async (id, token) => {
 
     return response.json();
 };
+
+export const fetchAttendanceByDate = async (date, token) => {
+    const response = await fetch(`${BASE_URL}/attendance?date=${date}`, {
+        method: "GET",
+        headers: {
+            Authorization: `${token}`
+        },
+    });
+
+    const data = await response.json();
+
+    if (response.status === 404) {
+        return null;
+    }
+
+    if (!response.ok) {
+        throw new Error(data.message || "Attendance fetch failed");
+    }
+
+    return data.attendance || null;
+};
+
+export const saveAttendance = async (payload, token) => {
+    const response = await fetch(`${BASE_URL}/attendance`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            Authorization: `${token}`
+        },
+        body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Attendance save failed");
+    }
+
+    return data;
+};

@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchStudents } from "../services/api";
+import { fetchAttendanceByDate, fetchStudents, saveAttendance } from "../services/api";
 import { useAuth } from "../utils/auth";
+import { toast } from "react-toastify";
 
 const STATUS_STYLES = {
   Present: "bg-green-100 text-green-700",
   Absent: "bg-red-100 text-red-600",
   Late: "bg-yellow-100 text-yellow-700",
 };
+
+const ATTENDANCE_SAVED_TOAST_KEY = "attendanceSavedToast";
 
 const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -25,30 +28,60 @@ export default function Attendance() {
   const [search, setSearch] = useState("");
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { authorizationToken } = useAuth();
 
   useEffect(() => {
-    const loadStudents = async () => {
+    const shouldShowSavedToast = sessionStorage.getItem(ATTENDANCE_SAVED_TOAST_KEY);
+
+    if (shouldShowSavedToast === "true") {
+      toast.success("Attendance saved successfully");
+      sessionStorage.removeItem(ATTENDANCE_SAVED_TOAST_KEY);
+    }
+  }, []);
+
+  useEffect(() => {
+    const loadAttendancePage = async () => {
       setLoading(true);
       setError("");
 
       try {
-        const response = await fetchStudents(authorizationToken);
-        const normalizedStudents = Array.isArray(response?.students)
+        const [studentsResponse, attendanceResponse] = await Promise.all([
+          fetchStudents(authorizationToken),
+          fetchAttendanceByDate(date, authorizationToken),
+        ]);
+
+        const baseStudents = Array.isArray(studentsResponse?.students)
           ? sortByRollNo(
-              response.students.map((student) => ({
+              studentsResponse.students.map((student) => ({
                 id: student._id,
                 name: student.name,
                 rollNo: student.rollNo,
-                status: null,
+                status: "Absent",
                 time: null,
               }))
             )
           : [];
 
-        setStudents(normalizedStudents);
+        if (attendanceResponse?.records?.length) {
+          const attendanceMap = new Map(
+            attendanceResponse.records.map((record) => [
+              String(record.studentId?._id || record.studentId),
+              record.status,
+            ])
+          );
+
+          setStudents(
+            baseStudents.map((student) => ({
+              ...student,
+              status: attendanceMap.get(student.id) || "Absent",
+            }))
+          );
+        } else {
+          setStudents(baseStudents);
+        }
       } catch (err) {
         const statusCode = err.response?.status || err.status || 500;
         const errorMessage = err.response?.data?.message || err.message || "Unable to load students right now.";
@@ -64,8 +97,8 @@ export default function Attendance() {
       }
     };
 
-    loadStudents();
-  }, [authorizationToken, navigate]);
+    loadAttendancePage();
+  }, [authorizationToken, date, navigate]);
 
   const filtered = useMemo(
     () =>
@@ -118,8 +151,30 @@ export default function Attendance() {
     URL.revokeObjectURL(url);
   };
 
-  const submitAttendance = () => {
-    window.location.reload();
+  const submitAttendance = async () => {
+    setSaving(true);
+
+    try {
+      const payload = {
+        date,
+        records: students.map((student) => ({
+          studentId: student.id,
+          status: student.status || "Absent",
+        })),
+      };
+
+      await saveAttendance(payload, authorizationToken);
+      sessionStorage.setItem(ATTENDANCE_SAVED_TOAST_KEY, "true");
+      window.location.reload();
+    } catch (err) {
+      if (err.message?.toLowerCase().includes("admin")) {
+        toast.error("Only admins can save attendance right now.");
+      } else {
+        toast.error(err.message || "Unable to save attendance.");
+      }
+    } finally {
+      setSaving(false);
+    }
   };
 
   const formatDate = (value) => {
@@ -278,9 +333,10 @@ export default function Attendance() {
         </button>
         <button
           onClick={submitAttendance}
-          className="rounded-xl bg-emerald-600 px-6 py-2.5 cursor-pointer font-semibold text-white transition-colors hover:bg-emerald-700"
+          disabled={saving || loading}
+          className="rounded-xl bg-emerald-600 px-6 py-2.5 cursor-pointer font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          Submit Attendance
+          {saving ? "Saving..." : "Submit Attendance"}
         </button>
         <button
           onClick={exportCSV}

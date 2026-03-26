@@ -77,7 +77,7 @@ const updateStudent = async (req, res) => {
         const updated = await Student.findByIdAndUpdate(
             id,
             updateData,
-            { new: true, runValidators: true }
+            { returnDocument: 'after', runValidators: true }
         );
 
         if (!updated) {

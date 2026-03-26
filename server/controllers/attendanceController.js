@@ -57,7 +57,7 @@ const saveAttendanceByDate = async (req, res) => {
             { date: normalizedDate },
             { date: normalizedDate, records },
             {
-                new: true,
+                returnDocument: 'after',
                 upsert: true,
                 runValidators: true,
                 setDefaultsOnInsert: true,
