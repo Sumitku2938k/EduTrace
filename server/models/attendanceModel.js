@@ -24,7 +24,6 @@ const attendanceSchema = new mongoose.Schema(
         date: {
             type: Date,
             required: true,
-            unique: true,
             set: (value) => {
                 const parsedDate = new Date(value);
                 parsedDate.setHours(0, 0, 0, 0); //same date ke multiple docs ban jaate hain, isliye time ko zero kar diya
