@@ -117,6 +117,7 @@ export default function Students() {
   }, [search, studentsData]);
 
   const totalDepartments = new Set(studentsData.map((student) => student.department)).size;
+  const irregularStudentIds = new Set(irregularStudents.map((student) => String(student.studentId)));
 
   return (
     <div className="bg-gray-50 px-8 py-8 font-sans">
@@ -280,17 +281,23 @@ export default function Students() {
               </div>
             ) : (
               filtered.map((student) => (
+                (() => {
+                  const isAtRisk = (student.attendancePercentage ?? 0) < 75;
+                  const isIrregular = irregularStudentIds.has(String(student._id));
+                  const isRegular = !isAtRisk && !isIrregular;
+
+                  return (
                 <div
                   key={student._id}
                   onClick={() => setSelectedId(selectedId === student._id ? null : student._id)}
                   className={`cursor-pointer rounded-2xl border px-6 py-5 shadow-sm transition-all hover:shadow-md ${
                     selectedId === student._id
                       ? "border-blue-300 bg-blue-50"
-                      : student.attendancePercentage < 75
+                      : isAtRisk
                         ? "border-red-200 bg-red-50/40"
-                        : irregularStudents.some((entry) => String(entry.studentId) === String(student._id))
+                        : isIrregular
                           ? "border-amber-200 bg-amber-50/40"
-                          : "border-gray-100 bg-white"
+                          : "border-emerald-200 bg-emerald-50/40"
                   }`}
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -308,14 +315,19 @@ export default function Students() {
                         <span>
                           Attendance: <b>{student.attendancePercentage ?? 0}%</b>
                         </span>
-                        {student.attendancePercentage < 75 ? (
+                        {isAtRisk ? (
                           <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
                             At-Risk
                           </span>
                         ) : null}
-                        {irregularStudents.some((entry) => String(entry.studentId) === String(student._id)) ? (
+                        {isIrregular ? (
                           <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
                             Irregular
+                          </span>
+                        ) : null}
+                        {isRegular ? (
+                          <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                            Regular
                           </span>
                         ) : null}
                       </div>
@@ -352,6 +364,8 @@ export default function Students() {
                     </div>
                   ) : null}
                 </div>
+                  );
+                })()
               ))
             )}
           </div>
