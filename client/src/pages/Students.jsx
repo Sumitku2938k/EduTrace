@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchStudentAttendancePercentages, fetchStudents } from "../services/api";
+import { fetchDashboardSummary, fetchStudentAttendancePercentages, fetchStudents } from "../services/api";
 import { useAuth } from "../utils/auth";
 import StudentForm from "../components/StudentForm";
 
@@ -16,6 +16,7 @@ export default function Students() {
   const [studentsData, setStudentsData] = useState([]);
   const [atRiskStudents, setAtRiskStudents] = useState([]);
   const [irregularStudents, setIrregularStudents] = useState([]);
+  const [attendanceSummary, setAttendanceSummary] = useState({ totalStudents: 0, present: 0 });
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -52,6 +53,7 @@ export default function Students() {
         let percentageMap = new Map();
         let nextAtRiskStudents = [];
         let nextIrregularStudents = [];
+        let nextAttendanceSummary = { totalStudents: 0, present: 0 };
 
         try {
           const percentageResponse = await fetchStudentAttendancePercentages(authorizationToken);
@@ -65,6 +67,16 @@ export default function Students() {
           nextIrregularStudents = percentageResponse?.irregularStudents || [];
         } catch (percentageError) {
           console.error("Failed to load attendance percentages:", percentageError);
+        }
+
+        try {
+          const dashboardSummary = await fetchDashboardSummary(authorizationToken);
+          nextAttendanceSummary = {
+            totalStudents: dashboardSummary?.totalStudents ?? 0,
+            present: dashboardSummary?.present ?? 0,
+          };
+        } catch (summaryError) {
+          console.error("Failed to load dashboard attendance summary:", summaryError);
         }
 
         const normalizedStudents = Array.isArray(response)
@@ -82,6 +94,7 @@ export default function Students() {
         setStudentsData(normalizedStudents);
         setAtRiskStudents(sortByRollNo(nextAtRiskStudents));
         setIrregularStudents(sortByRollNo(nextIrregularStudents));
+        setAttendanceSummary(nextAttendanceSummary);
       } catch (err) {
         const statusCode = err.response?.status || err.status || 500;
         const errorMessage = err.response?.data?.message || err.message || "Unable to load students right now.";
@@ -118,6 +131,10 @@ export default function Students() {
 
   const totalDepartments = new Set(studentsData.map((student) => student.department)).size;
   const irregularStudentIds = new Set(irregularStudents.map((student) => String(student.studentId)));
+  const averageAttendance =
+    attendanceSummary.totalStudents > 0
+      ? Math.round((attendanceSummary.present / attendanceSummary.totalStudents) * 100)
+      : 0;
 
   return (
     <div className="bg-gray-50 px-8 py-8 font-sans">
@@ -157,8 +174,8 @@ export default function Students() {
           <p className="mt-1 text-4xl font-bold text-gray-900">{totalDepartments}</p>
         </div>  
         <div className="rounded-2xl border border-gray-100 bg-white px-8 py-6 shadow-sm">
-          <p className="text-sm font-medium text-gray-500">Results Shown</p>
-          <p className="mt-1 text-4xl font-bold text-gray-900">{filtered.length}</p>
+          <p className="text-sm font-medium text-gray-500">Average Attendance</p>
+          <p className="mt-1 text-4xl font-bold text-gray-900">{averageAttendance}%</p>
         </div>
       </div>
 
