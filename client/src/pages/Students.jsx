@@ -206,12 +206,12 @@ export default function Students() {
                         <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
                           {student.department}
                         </span>
-                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                          Attendance {student.attendancePercentage ?? 0}%
-                        </span>
                       </div>
                       <p className="text-sm text-gray-500">
                         Roll No: {student.rollNo} | {student.email}
+                      </p>
+                      <p className="mt-2 text-s text-gray-500">
+                        Attendance: <b>{student.attendancePercentage ?? 0}%</b>
                       </p>
                     </div>
 
