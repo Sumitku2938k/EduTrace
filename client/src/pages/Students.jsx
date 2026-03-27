@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchStudents } from "../services/api";
+import { fetchStudentAttendancePercentages, fetchStudents } from "../services/api";
 import { useAuth } from "../utils/auth";
 import StudentForm from "../components/StudentForm";
 
@@ -47,10 +47,30 @@ export default function Students() {
 
       try {
         const response = await fetchStudents(authorizationToken);
+        let percentageMap = new Map();
+
+        try {
+          const percentageResponse = await fetchStudentAttendancePercentages(authorizationToken);
+          percentageMap = new Map(
+            (percentageResponse?.students || []).map((student) => [
+              String(student.studentId),
+              Number(student.attendancePercentage) || 0,
+            ])
+          );
+        } catch (percentageError) {
+          console.error("Failed to load attendance percentages:", percentageError);
+        }
+
         const normalizedStudents = Array.isArray(response)
-          ? sortByRollNo(response)
+          ? sortByRollNo(response).map((student) => ({
+              ...student,
+              attendancePercentage: percentageMap.get(String(student._id)) ?? 0,
+            }))
           : Array.isArray(response?.students)
-            ? sortByRollNo(response.students)
+            ? sortByRollNo(response.students).map((student) => ({
+                ...student,
+                attendancePercentage: percentageMap.get(String(student._id)) ?? 0,
+              }))
             : [];
 
         setStudentsData(normalizedStudents);
@@ -186,6 +206,9 @@ export default function Students() {
                         <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
                           {student.department}
                         </span>
+                        <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                          Attendance {student.attendancePercentage ?? 0}%
+                        </span>
                       </div>
                       <p className="text-sm text-gray-500">
                         Roll No: {student.rollNo} | {student.email}
@@ -215,6 +238,10 @@ export default function Students() {
                       <div className="rounded-xl bg-white px-4 py-3">
                         <p className="text-xs uppercase tracking-wide text-gray-400">Department</p>
                         <p className="mt-1 font-semibold text-gray-900">{student.department}</p>
+                      </div>
+                      <div className="rounded-xl bg-white px-4 py-3">
+                        <p className="text-xs uppercase tracking-wide text-gray-400">Attendance</p>
+                        <p className="mt-1 font-semibold text-gray-900">{student.attendancePercentage ?? 0}%</p>
                       </div>
                     </div>
                   ) : null}

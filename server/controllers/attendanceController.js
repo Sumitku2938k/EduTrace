@@ -159,4 +159,70 @@ const getDashboardSummary = async (req, res) => {
     }
 };
 
-module.exports = { saveAttendanceByDate, getAttendanceByDate, getAttendanceByStudent, getDashboardSummary };
+const getStudentAttendancePercentages = async (_req, res) => {
+    try {
+        const [attendanceDocs, students] = await Promise.all([
+            Attendance.find().select('records').lean(),
+            Student.find().select('name rollNo email department').lean(),
+        ]);
+
+        const totalClasses = attendanceDocs.length;
+
+        const studentStats = new Map(
+            students.map((student) => [
+                String(student._id),
+                {
+                    present: 0,
+                    absent: 0,
+                    late: 0,
+                },
+            ])
+        );
+
+        attendanceDocs.forEach((attendanceDoc) => {
+            attendanceDoc.records.forEach((record) => {
+                const key = String(record.studentId);
+                const stat = studentStats.get(key);
+
+                if (!stat) {
+                    return;
+                }
+
+                if (record.status === 'Present') stat.present += 1;
+                if (record.status === 'Absent') stat.absent += 1;
+                if (record.status === 'Late') stat.late += 1;
+            });
+        });
+
+        const studentPercentages = students.map((student) => {
+            const stats = studentStats.get(String(student._id)) || { present: 0, absent: 0, late: 0 };
+            const attendancePercentage =
+                totalClasses > 0 ? Math.round(((stats.present + stats.late) / totalClasses) * 100) : 0;
+
+            return {
+                studentId: student._id,
+                name: student.name,
+                attendancePercentage,
+                present: stats.present,
+                absent: stats.absent,
+                late: stats.late,
+            };
+        });
+
+        return res.status(200).json({
+            totalClasses,
+            students: studentPercentages,
+        });
+    } catch (error) {
+        console.error('Error fetching student attendance percentages:', error);
+        return res.status(500).json({ message: 'Failed to fetch student attendance percentages' });
+    }
+};
+
+module.exports = {
+    saveAttendanceByDate,
+    getAttendanceByDate,
+    getAttendanceByStudent,
+    getDashboardSummary,
+    getStudentAttendancePercentages,
+};
