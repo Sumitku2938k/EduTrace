@@ -14,6 +14,8 @@ const sortByRollNo = (students) =>
 
 export default function Students() {
   const [studentsData, setStudentsData] = useState([]);
+  const [atRiskStudents, setAtRiskStudents] = useState([]);
+  const [irregularStudents, setIrregularStudents] = useState([]);
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -48,6 +50,8 @@ export default function Students() {
       try {
         const response = await fetchStudents(authorizationToken);
         let percentageMap = new Map();
+        let nextAtRiskStudents = [];
+        let nextIrregularStudents = [];
 
         try {
           const percentageResponse = await fetchStudentAttendancePercentages(authorizationToken);
@@ -57,6 +61,8 @@ export default function Students() {
               Number(student.attendancePercentage) || 0,
             ])
           );
+          nextAtRiskStudents = percentageResponse?.atRiskStudents || [];
+          nextIrregularStudents = percentageResponse?.irregularStudents || [];
         } catch (percentageError) {
           console.error("Failed to load attendance percentages:", percentageError);
         }
@@ -74,6 +80,8 @@ export default function Students() {
             : [];
 
         setStudentsData(normalizedStudents);
+        setAtRiskStudents(sortByRollNo(nextAtRiskStudents));
+        setIrregularStudents(sortByRollNo(nextIrregularStudents));
       } catch (err) {
         const statusCode = err.response?.status || err.status || 500;
         const errorMessage = err.response?.data?.message || err.message || "Unable to load students right now.";
@@ -153,6 +161,86 @@ export default function Students() {
         </div>
       </div>
 
+      <div className="mb-6 grid gap-6 xl:grid-cols-2">
+        <div className="rounded-3xl border border-red-100 bg-red-50/80 p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-red-900">At-Risk Students</h2>
+              <p className="mt-1 text-sm text-red-700">Attendance percentage below 75%.</p>
+            </div>
+            <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
+              {atRiskStudents.length}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {atRiskStudents.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-red-200 bg-white/70 px-4 py-6 text-center text-sm text-red-600">
+                No at-risk students found right now.
+              </div>
+            ) : (
+              atRiskStudents.map((student) => (
+                <div
+                  key={student.studentId}
+                  className="rounded-2xl border border-red-100 bg-white px-4 py-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-gray-900">{student.name}</p>
+                      <p className="text-sm text-gray-500">
+                        Roll No: {student.rollNo} | {student.department}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-700">
+                      {student.percentage}%
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-amber-100 bg-amber-50/80 p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-amber-900">Irregular Students</h2>
+              <p className="mt-1 text-sm text-amber-700">Absent 3 or more times in the last 7 days.</p>
+            </div>
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700">
+              {irregularStudents.length}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {irregularStudents.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-amber-200 bg-white/70 px-4 py-6 text-center text-sm text-amber-700">
+                No irregular students found right now.
+              </div>
+            ) : (
+              irregularStudents.map((student) => (
+                <div
+                  key={student.studentId}
+                  className="rounded-2xl border border-amber-100 bg-white px-4 py-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-gray-900">{student.name}</p>
+                      <p className="text-sm text-gray-500">
+                        Roll No: {student.rollNo} | {student.department}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700">
+                      {student.absentCountLast7Days} absents
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
       <div className="relative mb-6">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -196,7 +284,13 @@ export default function Students() {
                   key={student._id}
                   onClick={() => setSelectedId(selectedId === student._id ? null : student._id)}
                   className={`cursor-pointer rounded-2xl border px-6 py-5 shadow-sm transition-all hover:shadow-md ${
-                    selectedId === student._id ? "border-blue-300 bg-blue-50" : "border-gray-100 bg-white"
+                    selectedId === student._id
+                      ? "border-blue-300 bg-blue-50"
+                      : student.attendancePercentage < 75
+                        ? "border-red-200 bg-red-50/40"
+                        : irregularStudents.some((entry) => String(entry.studentId) === String(student._id))
+                          ? "border-amber-200 bg-amber-50/40"
+                          : "border-gray-100 bg-white"
                   }`}
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -210,9 +304,21 @@ export default function Students() {
                       <p className="text-sm text-gray-500">
                         Roll No: {student.rollNo} | {student.email}
                       </p>
-                      <p className="mt-2 text-s text-gray-500">
-                        Attendance: <b>{student.attendancePercentage ?? 0}%</b>
-                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                        <span>
+                          Attendance: <b>{student.attendancePercentage ?? 0}%</b>
+                        </span>
+                        {student.attendancePercentage < 75 ? (
+                          <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                            At-Risk
+                          </span>
+                        ) : null}
+                        {irregularStudents.some((entry) => String(entry.studentId) === String(student._id)) ? (
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                            Irregular
+                          </span>
+                        ) : null}
+                      </div>
                     </div>
 
                     <svg

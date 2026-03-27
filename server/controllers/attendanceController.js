@@ -161,9 +161,21 @@ const getDashboardSummary = async (req, res) => {
 
 const getStudentAttendancePercentages = async (_req, res) => {
     try {
-        const [attendanceDocs, students] = await Promise.all([
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const last7DaysStart = new Date(today);
+        last7DaysStart.setDate(last7DaysStart.getDate() - 6);
+
+        const [attendanceDocs, students, last7DaysAttendanceDocs] = await Promise.all([
             Attendance.find().select('records').lean(),
             Student.find().select('name rollNo email department').lean(),
+            Attendance.find({
+                date: {
+                    $gte: last7DaysStart,
+                    $lte: today,
+                },
+            }).select('date records').lean(),
         ]);
 
         const totalClasses = attendanceDocs.length;
@@ -177,6 +189,10 @@ const getStudentAttendancePercentages = async (_req, res) => {
                     late: 0,
                 },
             ])
+        );
+
+        const last7DaysAbsentStats = new Map(
+            students.map((student) => [String(student._id), 0])
         );
 
         attendanceDocs.forEach((attendanceDoc) => {
@@ -194,24 +210,69 @@ const getStudentAttendancePercentages = async (_req, res) => {
             });
         });
 
+        last7DaysAttendanceDocs.forEach((attendanceDoc) => {
+            attendanceDoc.records.forEach((record) => {
+                if (record.status !== 'Absent') {
+                    return;
+                }
+
+                const key = String(record.studentId);
+                if (!last7DaysAbsentStats.has(key)) {
+                    return;
+                }
+
+                last7DaysAbsentStats.set(key, last7DaysAbsentStats.get(key) + 1);
+            });
+        });
+
         const studentPercentages = students.map((student) => {
             const stats = studentStats.get(String(student._id)) || { present: 0, absent: 0, late: 0 };
+            const absentCountLast7Days = last7DaysAbsentStats.get(String(student._id)) || 0;
             const attendancePercentage =
                 totalClasses > 0 ? Math.round(((stats.present + stats.late) / totalClasses) * 100) : 0;
 
             return {
                 studentId: student._id,
                 name: student.name,
+                rollNo: student.rollNo,
+                email: student.email,
+                department: student.department,
                 attendancePercentage,
                 present: stats.present,
                 absent: stats.absent,
                 late: stats.late,
+                absentCountLast7Days,
             };
         });
+
+        const atRiskStudents = studentPercentages
+            .filter((student) => student.attendancePercentage < 75)
+            .sort((firstStudent, secondStudent) => firstStudent.attendancePercentage - secondStudent.attendancePercentage)
+            .map((student) => ({
+                studentId: student.studentId,
+                name: student.name,
+                rollNo: student.rollNo,
+                percentage: student.attendancePercentage,
+                department: student.department,
+            }));
+
+        const irregularStudents = studentPercentages
+            .filter((student) => student.absentCountLast7Days >= 3)
+            .sort((firstStudent, secondStudent) => secondStudent.absentCountLast7Days - firstStudent.absentCountLast7Days)
+            .map((student) => ({
+                studentId: student.studentId,
+                name: student.name,
+                rollNo: student.rollNo,
+                absentCountLast7Days: student.absentCountLast7Days,
+                percentage: student.attendancePercentage,
+                department: student.department,
+            }));
 
         return res.status(200).json({
             totalClasses,
             students: studentPercentages,
+            atRiskStudents,
+            irregularStudents,
         });
     } catch (error) {
         console.error('Error fetching student attendance percentages:', error);
