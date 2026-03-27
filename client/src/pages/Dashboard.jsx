@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 import DashboardStatCard from "../components/dashboard/DashboardStatCard";
 import { useNavigate } from "react-router-dom";
+import { fetchDashboardSummary } from "../services/api";
+import { useAuth } from "../utils/auth";
 
 const attendanceData = [
     { month: "Jan", attendance: 95 },
@@ -41,67 +43,90 @@ const alerts = [
     },
 ];
 
-const statCards = [
-    {
-        label: "Total Students",
-        value: "45",
-        valueColor: "text-gray-900",
-        bgColor: "bg-blue-50",
-        icon: (
-            <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2h5M12 12a4 4 0 100-8 4 4 0 000 8z" />
-            </svg>
-        ),
-    },
-    {
-        label: "Present Today",
-        value: "42",
-        valueColor: "text-green-500",
-        bgColor: "bg-green-50",
-        icon: (
-            <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-        ),
-    },
-    {
-        label: "Absent Today",
-        value: "2",
-        valueColor: "text-red-500",
-        bgColor: "bg-red-50",
-        icon: (
-            <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-        ),
-    },
-    {
-        label: "Late Today",
-        value: "1",
-        valueColor: "text-yellow-500",
-        bgColor: "bg-yellow-50",
-        icon: (
-            <svg className="w-6 h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-        ),
-    },
-    {
-        label: "Avg. Attendance",
-        value: "88%",
-        valueColor: "text-blue-600",
-        bgColor: "bg-blue-50",
-        icon: (
-            <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-        ),
-    },
-];
-
 export default function Dashboard() {
     const [activeIndex, setActiveIndex] = useState(null);
+    const [summary, setSummary] = useState({ totalStudents: 0, present: 0, absent: 0, late: 0 });
     const navigate = useNavigate();
+    const { authorizationToken } = useAuth();
+
+    useEffect(() => {
+        const loadDashboardSummary = async () => {
+            try {
+                const data = await fetchDashboardSummary(authorizationToken);
+                setSummary({
+                    totalStudents: data.totalStudents ?? 0,
+                    present: data.present ?? 0,
+                    absent: data.absent ?? 0,
+                    late: data.late ?? 0,
+                });
+            } catch (error) {
+                console.error("Failed to load dashboard summary:", error);
+            }
+        };
+
+        loadDashboardSummary();
+    }, [authorizationToken]);
+
+    const attendancePercentage =
+        summary.totalStudents > 0 ? Math.round((summary.present / summary.totalStudents) * 100) : 0;
+
+    const statCards = [
+        {
+            label: "Total Students",
+            value: String(summary.totalStudents),
+            valueColor: "text-gray-900",
+            bgColor: "bg-blue-50",
+            icon: (
+                <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2h5M12 12a4 4 0 100-8 4 4 0 000 8z" />
+                </svg>
+            ),
+        },
+        {
+            label: "Present Today",
+            value: String(summary.present),
+            valueColor: "text-green-500",
+            bgColor: "bg-green-50",
+            icon: (
+                <svg className="w-6 h-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            ),
+        },
+        {
+            label: "Absent Today",
+            value: String(summary.absent),
+            valueColor: "text-red-500",
+            bgColor: "bg-red-50",
+            icon: (
+                <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+        },
+        {
+            label: "Late Today",
+            value: String(summary.late),
+            valueColor: "text-yellow-500",
+            bgColor: "bg-yellow-50",
+            icon: (
+                <svg className="w-6 h-6 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            ),
+        },
+        {
+            label: "Avg. Attendance",
+            value: `${attendancePercentage}%`,
+            valueColor: "text-blue-600",
+            bgColor: "bg-blue-50",
+            icon: (
+                <svg className="w-6 h-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+            ),
+        },
+    ];
     
     return (
         <div className="bg-gray-50 px-8 py-8 font-sans">

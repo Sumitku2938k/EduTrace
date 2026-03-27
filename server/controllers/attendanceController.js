@@ -131,4 +131,32 @@ const getAttendanceByStudent = async (req, res) => {
     }
 };
 
-module.exports = { saveAttendanceByDate, getAttendanceByDate, getAttendanceByStudent };
+const getDashboardSummary = async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const [totalStudents, todayAttendance] = await Promise.all([
+            Student.countDocuments(),
+            Attendance.findOne({ date: today }).select('records').lean(),
+        ]);
+
+        const records = Array.isArray(todayAttendance?.records) ? todayAttendance.records : [];
+
+        const present = records.filter((record) => record.status === 'Present').length;
+        const absent = records.filter((record) => record.status === 'Absent').length;
+        const late = records.filter((record) => record.status === 'Late').length;
+
+        return res.status(200).json({
+            totalStudents,
+            present,
+            absent,
+            late,
+        });
+    } catch (error) {
+        console.error('Error fetching dashboard summary:', error);
+        return res.status(500).json({ message: 'Failed to fetch dashboard summary' });
+    }
+};
+
+module.exports = { saveAttendanceByDate, getAttendanceByDate, getAttendanceByStudent, getDashboardSummary };
