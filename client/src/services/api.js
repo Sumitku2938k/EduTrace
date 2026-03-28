@@ -185,3 +185,20 @@ export const fetchStudentAttendancePercentages = async (token) => {
 
     return data;
 };
+
+export const fetchStudentAttendance = async (studentId, token) => {
+    const response = await fetch(`${BASE_URL}/attendance/student/${studentId}`, {
+        method: "GET",
+        headers: {
+            Authorization: `${token}`
+        },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Student attendance fetch failed");
+    }
+
+    return data;
+};

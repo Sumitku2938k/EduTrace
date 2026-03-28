@@ -1,52 +1,78 @@
-import { useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, } from "recharts";
+import { useEffect, useMemo, useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import { useNavigate, useParams } from "react-router-dom";
+import { getStudentById, fetchStudentAttendance, fetchStudentAttendancePercentages } from "../services/api";
+import { useAuth } from "../utils/auth";
 
-// ── Sample Data ────────────────────────────────────────────────────────────────
-const studentData = {
-    name: "Alice Johnson",
-    id: "s001",
-    email: "alice.johnson@school.edu",
-    attendancePercent: 92,
-    status: "Regular",
-    lateCount: 2,
-    riskScore: 10,
-    absentCount: 2,
-    monthlyTrend: [
-        { month: "Jan", value: 96 },
-        { month: "Feb", value: 93 },
-        { month: "Mar", value: 91 },
-        { month: "Apr", value: 95 },
-        { month: "May", value: 98 },
-        { month: "Jun", value: 88 },
-    ],
-    recentAttendance: [
-        { date: "2024-01-15", status: "Present" },
-        { date: "2024-01-14", status: "Present" },
-        { date: "2024-01-13", status: "Late" },
-        { date: "2024-01-12", status: "Present" },
-        { date: "2024-01-11", status: "Present" },
-        { date: "2024-01-10", status: "Absent" },
-        { date: "2024-01-09", status: "Present" },
-        { date: "2024-01-08", status: "Present" },
-    ],
-    aiInsights: [
-        { label: "Attendance Status", value: "Good attendance record" },
-        { label: "Pattern Analysis", value: "Punctual attendance" },
-        { label: "Risk Assessment", value: "Risk score of 10% indicates low risk of dropout" },
-    ],
+const monthlyTrendData = [
+  { month: "Jan", value: 96 },
+  { month: "Feb", value: 93 },
+  { month: "Mar", value: 91 },
+  { month: "Apr", value: 95 },
+  { month: "May", value: 98 },
+  { month: "Jun", value: 88 },
+];
+
+const statusStyles = {
+  Present: { bg: "#2563EB", color: "#fff" },
+  Late: { bg: "#7C3AED", color: "#fff" },
+  Absent: { bg: "#DC2626", color: "#fff" },
+  Regular: { bg: "#059669", color: "#fff" },
+  Irregular: { bg: "#D97706", color: "#fff" },
+  "At-Risk": { bg: "#DC2626", color: "#fff" },
 };
 
-// ── Status Badge ───────────────────────────────────────────────────────────────
-const statusStyles = {
-    Present: { bg: "#2563EB", color: "#fff" },
-    Late: { bg: "#7C3AED", color: "#fff" },
-    Absent: { bg: "#DC2626", color: "#fff" },
-    Regular: { bg: "#2563EB", color: "#fff" },
+const formatDisplayDate = (value) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Invalid date";
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
+
+const isWithinLastSevenDays = (value) => {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
+
+  const start = new Date(today);
+  start.setDate(today.getDate() - 6);
+  start.setHours(0, 0, 0, 0);
+
+  return date >= start && date <= today;
+};
+
+const getStudentStatus = (attendancePercentage, absentCountLast7Days) => {
+  if (attendancePercentage < 75) {
+    return "At-Risk";
+  }
+
+  if (absentCountLast7Days >= 3) {
+    return "Irregular";
+  }
+
+  return "Regular";
+};
+
+const getRiskScore = (attendancePercentage, absentCount, lateCount) => {
+  const score = Math.round((100 - attendancePercentage) * 0.7 + absentCount * 8 + lateCount * 4);
+  return Math.max(0, Math.min(100, score));
 };
 
 function Badge({ label }) {
   const style = statusStyles[label] || { bg: "#6B7280", color: "#fff" };
+
   return (
     <span
       style={{
@@ -65,7 +91,6 @@ function Badge({ label }) {
   );
 }
 
-// ── Stat Card ──────────────────────────────────────────────────────────────────
 function StatCard({ label, children, subtitle }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
@@ -73,21 +98,121 @@ function StatCard({ label, children, subtitle }) {
         {label}
       </span>
       <div>{children}</div>
-      {subtitle && (
+      {subtitle ? (
         <span style={{ fontSize: "12px", color: "#9CA3AF", fontFamily: "'DM Sans', sans-serif" }}>
           {subtitle}
         </span>
-      )}
+      ) : null}
     </div>
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────────
-export default function StudentDetail({ student = studentData }) {
+export default function StudentDetail() {
   const [hoveredBar, setHoveredBar] = useState(null);
+  const [student, setStudent] = useState(null);
+  const [studentStats, setStudentStats] = useState({
+    attendancePercentage: 0,
+    present: 0,
+    absent: 0,
+    late: 0,
+    absentCountLast7Days: 0,
+  });
+  const [recentAttendance, setRecentAttendance] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const { id } = useParams();
-  const studentId = id || student.id;
+  const { authorizationToken } = useAuth();
+
+  useEffect(() => {
+    const loadStudentDetail = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [studentResponse, percentagesResponse, attendanceResponse] = await Promise.all([
+          getStudentById(id, authorizationToken),
+          fetchStudentAttendancePercentages(authorizationToken),
+          fetchStudentAttendance(id, authorizationToken),
+        ]);
+
+        const currentStudent = studentResponse?.student ?? null;
+        const currentStudentStats =
+          percentagesResponse?.students?.find((item) => String(item.studentId) === String(id)) || null;
+
+        const lastSevenDaysAttendance = (attendanceResponse?.attendance || [])
+          .filter((record) => isWithinLastSevenDays(record.date))
+          .sort((firstRecord, secondRecord) => new Date(secondRecord.date) - new Date(firstRecord.date))
+          .slice(0, 7);
+
+        setStudent(currentStudent);
+        setStudentStats({
+          attendancePercentage: currentStudentStats?.attendancePercentage ?? 0,
+          present: currentStudentStats?.present ?? 0,
+          absent: currentStudentStats?.absent ?? 0,
+          late: currentStudentStats?.late ?? 0,
+          absentCountLast7Days: currentStudentStats?.absentCountLast7Days ?? 0,
+        });
+        setRecentAttendance(lastSevenDaysAttendance);
+      } catch (err) {
+        const message = err?.message || "Failed to load student details.";
+        if (message.toLowerCase().includes("unauthorized")) {
+          navigate("/login");
+          return;
+        }
+
+        setError(message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadStudentDetail();
+  }, [authorizationToken, id, navigate]);
+
+  const derivedStatus = useMemo(
+    () => getStudentStatus(studentStats.attendancePercentage, studentStats.absentCountLast7Days),
+    [studentStats.attendancePercentage, studentStats.absentCountLast7Days]
+  );
+
+  const riskScore = useMemo(
+    () => getRiskScore(studentStats.attendancePercentage, studentStats.absent, studentStats.late),
+    [studentStats.attendancePercentage, studentStats.absent, studentStats.late]
+  );
+
+  const aiInsights = useMemo(
+    () => [
+      {
+        label: "Attendance Status",
+        value: `${studentStats.attendancePercentage}% attendance with ${derivedStatus.toLowerCase()} standing.`,
+      },
+      {
+        label: "Recent Pattern",
+        value: `${studentStats.absentCountLast7Days} absences recorded in the last 7 days and ${studentStats.late} late entries overall.`,
+      },
+      {
+        label: "Risk Assessment",
+        value: `Current risk score is ${riskScore}% based on attendance percentage, absences, and late count.`,
+      },
+    ],
+    [derivedStatus, riskScore, studentStats.absentCountLast7Days, studentStats.attendancePercentage, studentStats.late]
+  );
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl border border-gray-100 bg-white px-6 py-10 text-center text-gray-500 shadow-sm">
+        Loading student details...
+      </div>
+    );
+  }
+
+  if (error || !student) {
+    return (
+      <div className="rounded-2xl border border-red-100 bg-red-50 px-6 py-10 text-center text-red-600 shadow-sm">
+        {error || "Student not found."}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -101,10 +226,8 @@ export default function StudentDetail({ student = studentData }) {
         boxSizing: "border-box",
       }}
     >
-      {/* Google Font import via style tag */}
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');`}</style>
 
-      {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "36px" }}>
         <button
           onClick={() => navigate("/students")}
@@ -135,11 +258,10 @@ export default function StudentDetail({ student = studentData }) {
           >
             {student.name}
           </h1>
-          <p style={{ margin: 0, fontSize: "14px", color: "#6B7280" }}>ID: {studentId}</p>
+          <p style={{ margin: 0, fontSize: "14px", color: "#6B7280" }}>ID: {student._id}</p>
         </div>
       </div>
 
-      {/* ── Stat Row ── */}
       <div
         style={{
           display: "grid",
@@ -152,30 +274,29 @@ export default function StudentDetail({ student = studentData }) {
           boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
         }}
       >
-        <StatCard label="Attendance %" subtitle="Current month">
+        <StatCard label="Attendance %" subtitle="Overall attendance">
           <span style={{ fontSize: "32px", fontWeight: 700, color: "#111827" }}>
-            {student.attendancePercent}%
+            {studentStats.attendancePercentage}%
           </span>
         </StatCard>
 
         <StatCard label="Status" subtitle="Behavior classification">
-          <Badge label={student.status} />
+          <Badge label={derivedStatus} />
         </StatCard>
 
-        <StatCard label="Late Count" subtitle="This month">
+        <StatCard label="Late Count" subtitle="Overall recorded">
           <span style={{ fontSize: "32px", fontWeight: 700, color: "#F59E0B" }}>
-            {student.lateCount}
+            {studentStats.late}
           </span>
         </StatCard>
 
         <StatCard label="Risk Score" subtitle="0-100 scale">
           <span style={{ fontSize: "32px", fontWeight: 700, color: "#111827" }}>
-            {student.riskScore}%
+            {riskScore}%
           </span>
         </StatCard>
       </div>
 
-      {/* ── Charts & Recent Attendance ── */}
       <div
         style={{
           display: "grid",
@@ -184,7 +305,6 @@ export default function StudentDetail({ student = studentData }) {
           marginBottom: "32px",
         }}
       >
-        {/* Attendance Trend */}
         <div
           style={{
             backgroundColor: "#fff",
@@ -201,7 +321,7 @@ export default function StudentDetail({ student = studentData }) {
           </p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart
-              data={student.monthlyTrend}
+              data={monthlyTrendData}
               barCategoryGap="30%"
               onMouseLeave={() => setHoveredBar(null)}
             >
@@ -227,14 +347,14 @@ export default function StudentDetail({ student = studentData }) {
                   boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                   fontSize: "13px",
                 }}
-                formatter={(v) => [`${v}%`, "Attendance"]}
+                formatter={(value) => [`${value}%`, "Attendance"]}
               />
               <Bar
                 dataKey="value"
                 radius={[6, 6, 0, 0]}
                 onMouseEnter={(_, index) => setHoveredBar(index)}
               >
-                {student.monthlyTrend.map((_, index) => (
+                {monthlyTrendData.map((_, index) => (
                   <Cell
                     key={index}
                     fill={hoveredBar === index ? "#1D4ED8" : "#38BDF8"}
@@ -265,7 +385,6 @@ export default function StudentDetail({ student = studentData }) {
           </div>
         </div>
 
-        {/* Recent Attendance */}
         <div
           style={{
             backgroundColor: "#fff",
@@ -277,29 +396,43 @@ export default function StudentDetail({ student = studentData }) {
           <h2 style={{ margin: "0 0 4px 0", fontSize: "20px", fontWeight: 700, color: "#111827" }}>
             Recent Attendance
           </h2>
-          <p style={{ margin: "0 0 20px 0", fontSize: "13px", color: "#6B7280" }}>Last 8 days</p>
+          <p style={{ margin: "0 0 20px 0", fontSize: "13px", color: "#6B7280" }}>Last 7 days</p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            {student.recentAttendance.map((rec) => (
+            {recentAttendance.length === 0 ? (
               <div
-                key={rec.date}
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  border: "1px solid #E5E7EB",
-                  borderRadius: "10px",
-                  padding: "10px 16px",
+                  border: "1px dashed #D1D5DB",
+                  borderRadius: "12px",
+                  padding: "18px 16px",
+                  textAlign: "center",
+                  color: "#6B7280",
+                  fontSize: "14px",
                 }}
               >
-                <span style={{ fontSize: "14px", color: "#374151" }}>{rec.date}</span>
-                <Badge label={rec.status} />
+                No attendance records found in the last 7 days.
               </div>
-            ))}
+            ) : (
+              recentAttendance.map((record) => (
+                <div
+                  key={`${record.date}-${record.status}`}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    border: "1px solid #E5E7EB",
+                    borderRadius: "10px",
+                    padding: "10px 16px",
+                  }}
+                >
+                  <span style={{ fontSize: "14px", color: "#374151" }}>{formatDisplayDate(record.date)}</span>
+                  <Badge label={record.status} />
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>
 
-      {/* ── Student Information ── */}
       <div
         style={{
           backgroundColor: "#fff",
@@ -320,9 +453,9 @@ export default function StudentDetail({ student = studentData }) {
             </p>
           </div>
           <div>
-            <p style={{ margin: "0 0 4px 0", fontSize: "13px", color: "#6B7280" }}>Student ID</p>
+            <p style={{ margin: "0 0 4px 0", fontSize: "13px", color: "#6B7280" }}>Roll Number</p>
             <p style={{ margin: 0, fontSize: "15px", color: "#111827", fontWeight: 500 }}>
-              {studentId}
+              {student.rollNo}
             </p>
           </div>
           <div>
@@ -332,15 +465,26 @@ export default function StudentDetail({ student = studentData }) {
             </p>
           </div>
           <div>
+            <p style={{ margin: "0 0 4px 0", fontSize: "13px", color: "#6B7280" }}>Department</p>
+            <p style={{ margin: 0, fontSize: "15px", color: "#111827", fontWeight: 500 }}>
+              {student.department}
+            </p>
+          </div>
+          <div>
+            <p style={{ margin: "0 0 4px 0", fontSize: "13px", color: "#6B7280" }}>Present Count</p>
+            <p style={{ margin: 0, fontSize: "15px", color: "#059669", fontWeight: 700 }}>
+              {studentStats.present}
+            </p>
+          </div>
+          <div>
             <p style={{ margin: "0 0 4px 0", fontSize: "13px", color: "#6B7280" }}>Absent Count</p>
             <p style={{ margin: 0, fontSize: "15px", color: "#DC2626", fontWeight: 700 }}>
-              {student.absentCount}
+              {studentStats.absent}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── AI Insights ── */}
       <div
         style={{
           backgroundColor: "#EFF6FF",
@@ -360,7 +504,7 @@ export default function StudentDetail({ student = studentData }) {
           AI Insights
         </h2>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {student.aiInsights.map((insight) => (
+          {aiInsights.map((insight) => (
             <div key={insight.label} style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
               <span style={{ color: "#2563EB", fontWeight: 700, marginTop: "1px" }}>✓</span>
               <p style={{ margin: 0, fontSize: "14px", color: "#1E40AF" }}>
