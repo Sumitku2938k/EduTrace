@@ -18,7 +18,6 @@ export default function Students() {
   const [irregularStudents, setIrregularStudents] = useState([]);
   const [attendanceSummary, setAttendanceSummary] = useState({ totalStudents: 0, present: 0 });
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -306,15 +305,13 @@ export default function Students() {
                   return (
                 <div
                   key={student._id}
-                  onClick={() => setSelectedId(selectedId === student._id ? null : student._id)}
+                  onClick={() => navigate(`/students/${student._id}`)}
                   className={`cursor-pointer rounded-2xl border px-6 py-5 shadow-sm transition-all hover:shadow-md ${
-                    selectedId === student._id
-                      ? "border-blue-300 bg-blue-50"
-                      : isAtRisk
-                        ? "border-red-200 bg-red-50/40"
-                        : isIrregular
-                          ? "border-amber-200 bg-amber-50/40"
-                          : "border-emerald-200 bg-emerald-50/40"
+                    isAtRisk
+                      ? "border-red-200 bg-red-50/40"
+                      : isIrregular
+                        ? "border-amber-200 bg-amber-50/40"
+                        : "border-emerald-200 bg-emerald-50/40"
                   }`}
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -351,7 +348,7 @@ export default function Students() {
                     </div>
 
                     <svg
-                      className={`h-5 w-5 text-gray-400 transition-transform ${selectedId === student._id ? "rotate-90" : ""}`}
+                      className="h-5 w-5 text-gray-400"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -359,27 +356,6 @@ export default function Students() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
-
-                  {selectedId === student._id ? (
-                    <div className="mt-4 grid gap-3 border-t border-blue-100 pt-4 text-sm text-gray-600 md:grid-cols-3">
-                      <div className="rounded-xl bg-white px-4 py-3">
-                        <p className="text-xs uppercase tracking-wide text-gray-400">Student ID</p>
-                        <p className="mt-1 font-semibold text-gray-900">{student._id}</p>
-                      </div>
-                      <div className="rounded-xl bg-white px-4 py-3">
-                        <p className="text-xs uppercase tracking-wide text-gray-400">Email</p>
-                        <p className="mt-1 font-semibold text-gray-900">{student.email}</p>
-                      </div>
-                      <div className="rounded-xl bg-white px-4 py-3">
-                        <p className="text-xs uppercase tracking-wide text-gray-400">Department</p>
-                        <p className="mt-1 font-semibold text-gray-900">{student.department}</p>
-                      </div>
-                      <div className="rounded-xl bg-white px-4 py-3">
-                        <p className="text-xs uppercase tracking-wide text-gray-400">Attendance</p>
-                        <p className="mt-1 font-semibold text-gray-900">{student.attendancePercentage ?? 0}%</p>
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
                   );
                 })()
