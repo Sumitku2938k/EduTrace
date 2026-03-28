@@ -36,7 +36,7 @@ const formatDisplayDate = (value) => {
   }).format(date);
 };
 
-const isWithinLastSevenDays = (value) => {
+const isPastOrToday = (value) => {
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -45,12 +45,17 @@ const isWithinLastSevenDays = (value) => {
 
   const today = new Date();
   today.setHours(23, 59, 59, 999);
+  return date <= today;
+};
 
-  const start = new Date(today);
-  start.setDate(today.getDate() - 6);
-  start.setHours(0, 0, 0, 0);
+const isSunday = (value) => {
+  const date = new Date(value);
 
-  return date >= start && date <= today;
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  return date.getDay() === 0;
 };
 
 const getStudentStatus = (attendancePercentage, absentCountLast7Days) => {
@@ -141,7 +146,7 @@ export default function StudentDetail() {
           percentagesResponse?.students?.find((item) => String(item.studentId) === String(id)) || null;
 
         const lastSevenDaysAttendance = (attendanceResponse?.attendance || [])
-          .filter((record) => isWithinLastSevenDays(record.date))
+          .filter((record) => isPastOrToday(record.date) && !isSunday(record.date))
           .sort((firstRecord, secondRecord) => new Date(secondRecord.date) - new Date(firstRecord.date))
           .slice(0, 7);
 
@@ -396,7 +401,7 @@ export default function StudentDetail() {
           <h2 style={{ margin: "0 0 4px 0", fontSize: "20px", fontWeight: 700, color: "#111827" }}>
             Recent Attendance
           </h2>
-          <p style={{ margin: "0 0 20px 0", fontSize: "13px", color: "#6B7280" }}>Last 7 days</p>
+          <p style={{ margin: "0 0 20px 0", fontSize: "13px", color: "#6B7280" }}>Last 7 attendance days</p>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {recentAttendance.length === 0 ? (
               <div
@@ -409,7 +414,7 @@ export default function StudentDetail() {
                   fontSize: "14px",
                 }}
               >
-                No attendance records found in the last 7 days.
+                No attendance records found in the last 7 attendance days.
               </div>
             ) : (
               recentAttendance.map((record) => (
