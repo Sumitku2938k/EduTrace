@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Attendance = require('../models/AttendanceModel');
 const Student = require('../models/Student');
+const { recognizeFaceFromBuffer } = require('../services/faceRecognitionService');
 
 const normalizeDate = (value) => {
     const parsedDate = new Date(value);
@@ -280,10 +281,115 @@ const getStudentAttendancePercentages = async (_req, res) => {
     }
 };
 
+const recognizeFaceAndMarkAttendance = async (req, res) => {
+    try {
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ message: 'Please upload a valid image file' });
+        }
+
+        const normalizedDate = normalizeDate(req.body.date || new Date());
+        if (!normalizedDate) {
+            return res.status(400).json({ message: 'Please provide a valid attendance date' });
+        }
+
+        const markStatus = ['Present', 'Absent', 'Late'].includes(req.body.status) ? req.body.status : 'Present';
+
+        const studentsWithEmbeddings = await Student.find({
+            faceEmbedding: { $exists: true, $ne: [] },
+        }).select('_id name rollNo faceEmbedding faceEmbeddingModel').lean();
+
+        if (!studentsWithEmbeddings.length) {
+            return res.status(400).json({ message: 'No enrolled student faces found. Enroll student faces first.' });
+        }
+
+        const candidates = studentsWithEmbeddings.map((student) => ({
+            studentId: String(student._id),
+            embedding: student.faceEmbedding,
+        }));
+
+        const aiResult = await recognizeFaceFromBuffer({
+            imageBuffer: req.file.buffer,
+            mimeType: req.file.mimetype,
+            candidates,
+        });
+
+        if (!aiResult.isMatch || !aiResult.studentId) {
+            return res.status(200).json({
+                recognized: false,
+                message: 'Unknown face. Attendance not marked.',
+                confidence: aiResult.confidence,
+            });
+        }
+
+        const matchedStudent = studentsWithEmbeddings.find(
+            (student) => String(student._id) === String(aiResult.studentId)
+        );
+
+        if (!matchedStudent) {
+            return res.status(404).json({ message: 'Recognized student not found in records' });
+        }
+
+        const attendance = await Attendance.findOne({ date: normalizedDate });
+
+        if (!attendance) {
+            const created = await Attendance.create({
+                date: normalizedDate,
+                records: [{ studentId: matchedStudent._id, status: markStatus }],
+            });
+
+            await created.populate('records.studentId', 'name rollNo email department');
+            return res.status(200).json({
+                recognized: true,
+                message: `Attendance marked for ${matchedStudent.name}`,
+                student: {
+                    _id: matchedStudent._id,
+                    name: matchedStudent.name,
+                    rollNo: matchedStudent.rollNo,
+                },
+                confidence: aiResult.confidence,
+                attendance: created,
+            });
+        }
+
+        const recordIndex = attendance.records.findIndex(
+            (record) => String(record.studentId) === String(matchedStudent._id)
+        );
+
+        if (recordIndex >= 0) {
+            attendance.records[recordIndex].status = markStatus;
+        } else {
+            attendance.records.push({
+                studentId: matchedStudent._id,
+                status: markStatus,
+            });
+        }
+
+        await attendance.save();
+        await attendance.populate('records.studentId', 'name rollNo email department');
+
+        return res.status(200).json({
+            recognized: true,
+            message: `Attendance marked for ${matchedStudent.name}`,
+            student: {
+                _id: matchedStudent._id,
+                name: matchedStudent.name,
+                rollNo: matchedStudent.rollNo,
+            },
+            confidence: aiResult.confidence,
+            attendance,
+        });
+    } catch (error) {
+        console.error('Error recognizing face and marking attendance:', error);
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({ message: error.message || 'Failed to recognize face' });
+    }
+};
+
 module.exports = {
     saveAttendanceByDate,
     getAttendanceByDate,
     getAttendanceByStudent,
     getDashboardSummary,
     getStudentAttendancePercentages,
+    recognizeFaceAndMarkAttendance,
 };

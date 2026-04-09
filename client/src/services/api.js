@@ -202,3 +202,47 @@ export const fetchStudentAttendance = async (studentId, token) => {
 
     return data;
 };
+
+export const enrollStudentFace = async (studentId, imageFile, token) => {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+
+    const response = await fetch(`${BASE_URL}/students/${studentId}/enroll-face`, {
+        method: "POST",
+        headers: {
+            Authorization: `${token}`
+        },
+        body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Face enrollment failed");
+    }
+
+    return data;
+};
+
+export const recognizeFaceAndMarkAttendance = async ({ imageFile, date, status = "Present" }, token) => {
+    const formData = new FormData();
+    formData.append("image", imageFile);
+    formData.append("date", date);
+    formData.append("status", status);
+
+    const response = await fetch(`${BASE_URL}/attendance/recognize-face`, {
+        method: "POST",
+        headers: {
+            Authorization: `${token}`
+        },
+        body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Face recognition failed");
+    }
+
+    return data;
+};

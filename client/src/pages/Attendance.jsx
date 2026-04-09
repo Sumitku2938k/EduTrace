@@ -1,6 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchAttendanceByDate, fetchStudents, saveAttendance } from "../services/api";
+import {
+  fetchAttendanceByDate,
+  fetchStudents,
+  recognizeFaceAndMarkAttendance,
+  saveAttendance,
+} from "../services/api";
 import { useAuth } from "../utils/auth";
 import { toast } from "react-toastify";
 
@@ -29,7 +34,9 @@ export default function Attendance() {
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [recognizing, setRecognizing] = useState(false);
   const [error, setError] = useState("");
+  const imageInputRef = useRef(null);
   const navigate = useNavigate();
   const { authorizationToken } = useAuth();
 
@@ -174,6 +181,50 @@ export default function Attendance() {
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openFaceCapture = () => {
+    imageInputRef.current?.click();
+  };
+
+  const handleFaceCapture = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    setRecognizing(true);
+
+    try {
+      const result = await recognizeFaceAndMarkAttendance(
+        {
+          imageFile: file,
+          date,
+          status: "Present",
+        },
+        authorizationToken
+      );
+
+      if (!result.recognized || !result.student?._id) {
+        toast.info(result.message || "Unknown face. Mark attendance manually.");
+        return;
+      }
+
+      setStudents((prev) =>
+        prev.map((student) =>
+          student.id === result.student._id
+            ? { ...student, status: "Present", time: now() }
+            : student
+        )
+      );
+
+      toast.success(result.message || `Attendance marked for ${result.student.name}`);
+    } catch (err) {
+      toast.error(err.message || "Face recognition failed. Please mark manually.");
+    } finally {
+      setRecognizing(false);
+      event.target.value = "";
     }
   };
 
@@ -325,6 +376,21 @@ export default function Attendance() {
       </div>
 
       <div className="flex flex-wrap gap-3">
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFaceCapture}
+          className="hidden"
+        />
+        <button
+          onClick={openFaceCapture}
+          disabled={recognizing || loading}
+          className="rounded-xl bg-indigo-600 px-6 py-2.5 cursor-pointer font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {recognizing ? "Recognizing..." : "Capture Face & Mark Present"}
+        </button>
         <button
           onClick={markAllPresent}
           className="rounded-xl bg-blue-600 px-6 py-2.5 cursor-pointer font-semibold text-white transition-colors hover:bg-blue-700"

@@ -1,4 +1,5 @@
 const Student = require('../models/Student');
+const { enrollFaceFromBuffer } = require('../services/faceRecognitionService');
 
 const createStudent = async (req, res) => {
     try {
@@ -115,10 +116,55 @@ const deleteStudent = async (req, res) => {
     }
 };
 
+const enrollStudentFace = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (req.user && req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Unauthorized to enroll student face' });
+        }
+
+        if (!req.file || !req.file.buffer) {
+            return res.status(400).json({ message: 'Please upload a valid image file' });
+        }
+
+        const student = await Student.findById(id);
+        if (!student) {
+            return res.status(404).json({ message: 'Student not found' });
+        }
+
+        const aiResult = await enrollFaceFromBuffer({
+            imageBuffer: req.file.buffer,
+            mimeType: req.file.mimetype,
+        });
+
+        student.faceEmbedding = aiResult.embedding;
+        student.faceEmbeddingModel = aiResult.modelVersion || 'face_recognition_v1';
+        student.faceEnrolledAt = new Date();
+        await student.save();
+
+        return res.status(200).json({
+            message: 'Face enrolled successfully',
+            student: {
+                _id: student._id,
+                name: student.name,
+                rollNo: student.rollNo,
+                faceEnrolledAt: student.faceEnrolledAt,
+                faceEmbeddingModel: student.faceEmbeddingModel,
+            },
+        });
+    } catch (error) {
+        console.error('Error enrolling student face:', error);
+        const statusCode = error.statusCode || 500;
+        return res.status(statusCode).json({ message: error.message || 'Failed to enroll student face' });
+    }
+};
+
 module.exports = {
     createStudent,
     getStudents,
     getStudentById,
     updateStudent,
     deleteStudent,
+    enrollStudentFace,
 };

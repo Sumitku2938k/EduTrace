@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { createStudent } from "../services/api";
+import { createStudent, enrollStudentFace } from "../services/api";
 import { useAuth } from "../utils/auth";
 import { toast } from "react-toastify";
 
@@ -17,6 +17,7 @@ const initialStatus = {
 
 export default function StudentForm({ onStudentCreated, onCancel }) {
     const [formState, setFormState] = useState(initialFormState);
+    const [faceImageFile, setFaceImageFile] = useState(null);
     const [status, setStatus] = useState(initialStatus);
     const { authorizationToken, user } = useAuth();
     const isAdmin = user?.role === "admin";
@@ -56,10 +57,15 @@ export default function StudentForm({ onStudentCreated, onCancel }) {
             const data = await createStudent(payload, authorizationToken);
             const nextStudent = data.student || data;
 
+            if (faceImageFile && nextStudent?._id) {
+                await enrollStudentFace(nextStudent._id, faceImageFile, authorizationToken);
+            }
+
             setFormState(initialFormState);
+            setFaceImageFile(null);
             setStatus(initialStatus);
             await onStudentCreated?.(nextStudent);
-            toast.success("Student has been added");
+            toast.success(faceImageFile ? "Student added and face enrolled" : "Student has been added");
             onCancel?.();
         } catch (error) {
             setStatus({
@@ -124,6 +130,21 @@ export default function StudentForm({ onStudentCreated, onCancel }) {
                             placeholder="e.g. Computer Science"
                             className="mt-1 rounded-2xl border border-gray-200 px-3 py-2 text-sm text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
                         />
+                    </label>
+
+                    <label className="flex flex-col gap-1 text-sm text-gray-600 md:col-span-2">
+                        Face enrollment image (optional)
+                        <input
+                            name="image"
+                            type="file"
+                            accept="image/*"
+                            capture="user"
+                            onChange={(event) => setFaceImageFile(event.target.files?.[0] || null)}
+                            className="mt-1 rounded-2xl border border-gray-200 px-3 py-2 text-sm text-gray-900 file:mr-3 file:rounded-xl file:border-0 file:bg-blue-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-blue-700"
+                        />
+                        <span className="text-xs text-gray-500">
+                            Capture or upload a clear front-face image to enable AI recognition.
+                        </span>
                     </label>
                 </div>
 

@@ -23,6 +23,19 @@ const studentSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
+        faceEmbedding: {
+            type: [Number],
+            default: undefined,
+        },
+        faceEmbeddingModel: {
+            type: String,
+            default: 'face_recognition_v1',
+            trim: true,
+        },
+        faceEnrolledAt: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: { createdAt: true, updatedAt: false },
