@@ -36,7 +36,14 @@ export default function Attendance() {
   const [saving, setSaving] = useState(false);
   const [recognizing, setRecognizing] = useState(false);
   const [error, setError] = useState("");
-  const imageInputRef = useRef(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState("");
+  const [capturedImage, setCapturedImage] = useState("");
+  const [resultMessage, setResultMessage] = useState("");
+  const [resultType, setResultType] = useState("");
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
   const navigate = useNavigate();
   const { authorizationToken } = useAuth();
 
@@ -106,6 +113,25 @@ export default function Attendance() {
 
     loadAttendancePage();
   }, [authorizationToken, date, navigate]);
+
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cameraOpen || !videoRef.current || !streamRef.current) {
+      return;
+    }
+
+    videoRef.current.srcObject = streamRef.current;
+    videoRef.current.play().catch(() => {
+      setCameraError("Camera preview is not starting. Please try again.");
+    }); 
+  }, [cameraOpen]);
 
   const filtered = useMemo(
     () =>
@@ -184,22 +210,86 @@ export default function Attendance() {
     }
   };
 
-  const openFaceCapture = () => {
-    imageInputRef.current?.click();
+  const stopCameraStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
   };
 
-  const handleFaceCapture = async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) {
+  const openFaceCapture = async () => {
+    setCameraError("");
+    setResultMessage("");
+    setResultType("");
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("Your browser does not support camera access.");
       return;
     }
 
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
+      });
+
+      stopCameraStream();
+      streamRef.current = mediaStream;
+      setCameraOpen(true);
+      setCapturedImage("");
+    } catch (err) { 
+      setCameraError("Camera access denied. Please allow browser permission and try again.");
+      setCameraOpen(false);
+    }
+  };
+
+  const closeFaceCapture = () => {
+    stopCameraStream();
+    setCameraOpen(false);
+  };
+
+  const dataUrlToFile = async (dataUrl) => {
+    const response = await fetch(dataUrl);
+    const blob = await response.blob();
+    return new File([blob], `attendance-${Date.now()}.jpg`, { type: blob.type || "image/jpeg" });
+  };
+
+  const handleFaceCapture = async () => {
+    if (!videoRef.current || !canvasRef.current) {
+      return;
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const width = video.videoWidth;
+    const height = video.videoHeight;
+
+    if (!width || !height) {
+      setCameraError("Camera feed is not ready. Please try again after 1 second.");
+      return;
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d")?.drawImage(video, 0, 0, width, height);
+
+    const imageDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    setCapturedImage(imageDataUrl);
+
     setRecognizing(true);
+    setCameraError("");
+    setResultMessage("");
+    setResultType("");
 
     try {
+      const imageFile = await dataUrlToFile(imageDataUrl);
       const result = await recognizeFaceAndMarkAttendance(
         {
-          imageFile: file,
+          imageFile,
           date,
           status: "Present",
         },
@@ -207,7 +297,10 @@ export default function Attendance() {
       );
 
       if (!result.recognized || !result.student?._id) {
+        setResultMessage(result.message || "Unknown face");
+        setResultType("unknown");
         toast.info(result.message || "Unknown face. Mark attendance manually.");
+        closeFaceCapture();
         return;
       }
 
@@ -219,12 +312,16 @@ export default function Attendance() {
         )
       );
 
+      setResultMessage(result.message || `Attendance marked for ${result.student.name}`);
+      setResultType("success");
       toast.success(result.message || `Attendance marked for ${result.student.name}`);
     } catch (err) {
+      setResultMessage(err.message || "Face recognition failed");
+      setResultType("error");
       toast.error(err.message || "Face recognition failed. Please mark manually.");
     } finally {
       setRecognizing(false);
-      event.target.value = "";
+      closeFaceCapture();
     }
   };
 
@@ -376,20 +473,12 @@ export default function Attendance() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFaceCapture}
-          className="hidden"
-        />
         <button
           onClick={openFaceCapture}
           disabled={recognizing || loading}
           className="rounded-xl bg-indigo-600 px-6 py-2.5 cursor-pointer font-semibold text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {recognizing ? "Recognizing..." : "Capture Face & Mark Present"}
+          {recognizing ? "Recognizing..." : "Capture Face and Mark Attendance"}
         </button>
         <button
           onClick={markAllPresent}
@@ -410,6 +499,74 @@ export default function Attendance() {
         >
           Export to CSV
         </button>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-gray-900">Face Attendance</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Open the camera, capture a photo, and the system will recognize the student and mark attendance.
+        </p>
+
+        {cameraError ? (
+          <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600">
+            {cameraError}
+          </div>
+        ) : null}
+
+        {cameraOpen ? (
+          <div className="mt-4 space-y-4">
+            <div className="overflow-hidden rounded-2xl border border-gray-200 bg-gray-900">
+              <video ref={videoRef} autoPlay playsInline muted className="h-80 w-full object-cover" />
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={handleFaceCapture}
+                disabled={recognizing}
+                className="rounded-xl bg-emerald-600 px-5 py-2.5 cursor-pointer font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {recognizing ? "Processing..." : "Capture Photo"}
+              </button>
+              <button
+                onClick={closeFaceCapture}
+                disabled={recognizing}
+                className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 cursor-pointer font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Close Camera
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
+            Camera is currently off. Open the camera using the button above.
+          </div>
+        )}
+
+        <canvas ref={canvasRef} className="hidden" />
+
+        {capturedImage ? (
+          <div className="mt-6">
+            <p className="mb-2 text-sm font-semibold text-gray-700">Image Preview</p>
+            <div className="overflow-hidden rounded-2xl border border-gray-200">
+              <img src={capturedImage} alt="Captured preview" className="h-65 w-full object-cover" />
+            </div>
+          </div>
+        ) : null}
+
+        {resultMessage ? (
+          <div
+            className={`mt-4 rounded-xl px-4 py-3 text-sm font-medium ${
+              resultType === "success"
+                ? "border border-green-100 bg-green-50 text-green-700"
+                : resultType === "unknown"
+                  ? "border border-yellow-100 bg-yellow-50 text-yellow-700"
+                  : "border border-red-100 bg-red-50 text-red-600"
+            }`}
+          >
+            {resultType === "success" ? `Success: ${resultMessage}` : null}
+            {resultType === "unknown" ? `Unknown face: ${resultMessage}` : null}
+            {resultType === "error" ? resultMessage : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
