@@ -1,6 +1,7 @@
 import base64
 import io
 import os
+import string
 from typing import Any
 
 import face_recognition
@@ -21,7 +22,7 @@ class FaceServiceError(Exception):
         self.message = message
         self.status_code = status_code
 
-
+# base64 string → actual image  
 def decode_image(image_base64: str) -> np.ndarray:
     try:
         image_bytes = base64.b64decode(image_base64, validate=True)
@@ -30,7 +31,7 @@ def decode_image(image_base64: str) -> np.ndarray:
     except Exception as exc:
         raise FaceServiceError("Invalid image payload") from exc
 
-
+# actual image → face embedding vector  
 def get_single_face_embedding(image_array: np.ndarray) -> np.ndarray:
     face_locations = face_recognition.face_locations(image_array)
 
@@ -46,7 +47,7 @@ def get_single_face_embedding(image_array: np.ndarray) -> np.ndarray:
 
     return encodings[0]
 
-
+# request JSON hai ya nahi
 def require_json_object() -> dict[str, Any]:
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict):
@@ -107,7 +108,7 @@ def handle_internal_error(_error):
 def health_check():
     return jsonify({"status": "ok", "service": "face-recognition"})
 
-
+# enroll-face endpoint: image base64 string ko face embedding vector me convert karke return karta hai
 @app.post("/enroll-face")
 def enroll_face():
     payload = require_json_object()

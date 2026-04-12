@@ -3,8 +3,8 @@ const FACE_API_TIMEOUT_MS = Number(process.env.PYTHON_FACE_API_TIMEOUT_MS || 800
 
 const toBase64 = (buffer) => buffer.toString('base64');
 
-const postToFaceService = async (path, payload) => {
-    const controller = new AbortController();
+const postToFaceService = async (path, payload) => { // Node → HTTP POST → Python API
+    const controller = new AbortController(); //agar Python slow → request cancel
     const timer = setTimeout(() => controller.abort(), FACE_API_TIMEOUT_MS);
 
     try {
@@ -19,7 +19,7 @@ const postToFaceService = async (path, payload) => {
 
         const data = await response.json().catch(() => ({}));
 
-        if (!response.ok) {
+        if (!response.ok) { //Python gives error → throw
             const upstreamMessage = data.message || data.detail || 'Face service request failed';
             const error = new Error(upstreamMessage);
             error.statusCode = response.status;
@@ -28,7 +28,7 @@ const postToFaceService = async (path, payload) => {
 
         return data;
     } catch (error) {
-        if (error.name === 'AbortError') {
+        if (error.name === 'AbortError') { //8 sec cross → custom error
             const timeoutError = new Error('Face recognition service timeout. Please try manual attendance.');
             timeoutError.statusCode = 504;
             throw timeoutError;
@@ -40,13 +40,14 @@ const postToFaceService = async (path, payload) => {
     }
 };
 
+// student ka face register karne ke liye || buffer → base64 → Python API call
 const enrollFaceFromBuffer = async ({ imageBuffer, mimeType }) => {
     const data = await postToFaceService('/enroll-face', {
         imageBase64: toBase64(imageBuffer),
         mimeType,
     });
 
-    if (!Array.isArray(data.embedding) || data.embedding.length === 0) {
+    if (!Array.isArray(data.embedding) || data.embedding.length === 0) { //agar Python ne galat data diya → error
         const error = new Error('Face service returned invalid embedding');
         error.statusCode = 502;
         throw error;
@@ -58,6 +59,7 @@ const enrollFaceFromBuffer = async ({ imageBuffer, mimeType }) => {
     };
 };
 
+//face identify karne ke liye || buffer → base64 → Python API call with candidates → match result
 const recognizeFaceFromBuffer = async ({ imageBuffer, mimeType, candidates }) => {
     const data = await postToFaceService('/recognize-face', {
         imageBase64: toBase64(imageBuffer),
