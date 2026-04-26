@@ -6,6 +6,7 @@ const connectDB = require('./utils/db');
 const authRouter = require('./router/authRouter');
 const studentRouter = require('./router/studentRouter');
 const attendanceRouter = require('./router/attendanceRouter');
+const behaviorRouter = require('./router/behaviorRouter');
 const errorMiddleware = require('./middlewares/errorMiddleware');
 
 const app = express();
@@ -24,6 +25,7 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/students', studentRouter);
 app.use('/api/attendance', attendanceRouter);
+app.use('/api/behavior', behaviorRouter);
 
 // Global error handling middleware
 app.use(errorMiddleware);
