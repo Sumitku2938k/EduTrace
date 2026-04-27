@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchDashboardSummary, fetchStudentAttendancePercentages, fetchStudents } from "../services/api";
+import { fetchBehaviorClassification, fetchDashboardSummary, fetchStudents } from "../services/api";
 import { useAuth } from "../utils/auth";
 import StudentForm from "../components/StudentForm";
 
@@ -49,23 +49,29 @@ export default function Students() {
 
       try {
         const response = await fetchStudents(authorizationToken);
-        let percentageMap = new Map();
+        let classificationMap = new Map();
         let nextAtRiskStudents = [];
         let nextIrregularStudents = [];
         let nextAttendanceSummary = { totalStudents: 0, present: 0 };
 
         try {
-          const percentageResponse = await fetchStudentAttendancePercentages(authorizationToken);
-          percentageMap = new Map(
-            (percentageResponse?.students || []).map((student) => [
+          const classificationResponse = await fetchBehaviorClassification(authorizationToken);
+          const classifiedStudents = classificationResponse?.students || [];
+
+          classificationMap = new Map(
+            classifiedStudents.map((student) => [
               String(student.studentId),
-              Number(student.attendancePercentage) || 0,
+              {
+                attendancePercentage: Number(student.percentage) || 0,
+                category: student.category || "Regular",
+              },
             ])
           );
-          nextAtRiskStudents = percentageResponse?.atRiskStudents || [];
-          nextIrregularStudents = percentageResponse?.irregularStudents || [];
+
+          nextAtRiskStudents = classifiedStudents.filter((student) => student.category === "At-Risk");
+          nextIrregularStudents = classifiedStudents.filter((student) => student.category === "Irregular");
         } catch (percentageError) {
-          console.error("Failed to load attendance percentages:", percentageError);
+          console.error("Failed to load behavior classification:", percentageError);
         }
 
         try {
@@ -81,12 +87,14 @@ export default function Students() {
         const normalizedStudents = Array.isArray(response)
           ? sortByRollNo(response).map((student) => ({
               ...student,
-              attendancePercentage: percentageMap.get(String(student._id)) ?? 0,
+              attendancePercentage: classificationMap.get(String(student._id))?.attendancePercentage ?? 0,
+              behaviorCategory: classificationMap.get(String(student._id))?.category ?? "Regular",
             }))
           : Array.isArray(response?.students)
             ? sortByRollNo(response.students).map((student) => ({
                 ...student,
-                attendancePercentage: percentageMap.get(String(student._id)) ?? 0,
+                attendancePercentage: classificationMap.get(String(student._id))?.attendancePercentage ?? 0,
+                behaviorCategory: classificationMap.get(String(student._id))?.category ?? "Regular",
               }))
             : [];
 
@@ -129,7 +137,6 @@ export default function Students() {
   }, [search, studentsData]);
 
   const totalDepartments = new Set(studentsData.map((student) => student.department)).size;
-  const irregularStudentIds = new Set(irregularStudents.map((student) => String(student.studentId)));
   const averageAttendance =
     attendanceSummary.totalStudents > 0
       ? Math.round((attendanceSummary.present / attendanceSummary.totalStudents) * 100)
@@ -183,7 +190,7 @@ export default function Students() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold text-red-900">At-Risk Students</h2>
-              <p className="mt-1 text-sm text-red-700">Attendance percentage below 75%.</p>
+              <p className="mt-1 text-sm text-red-700">Attendance percentage below 60%.</p>
             </div>
             <span className="rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700">
               {atRiskStudents.length}
@@ -222,7 +229,7 @@ export default function Students() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold text-amber-900">Irregular Students</h2>
-              <p className="mt-1 text-sm text-amber-700">Absent 3 or more times in the last 7 days.</p>
+              <p className="mt-1 text-sm text-amber-700">Attendance percentage from 60% to 84%.</p>
             </div>
             <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-700">
               {irregularStudents.length}
@@ -248,7 +255,7 @@ export default function Students() {
                       </p>
                     </div>
                     <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-700">
-                      {student.absentCountLast7Days} absents
+                      {student.percentage}%
                     </span>
                   </div>
                 </div>
@@ -298,9 +305,9 @@ export default function Students() {
             ) : (
               filtered.map((student) => (
                 (() => {
-                  const isAtRisk = (student.attendancePercentage ?? 0) < 75;
-                  const isIrregular = irregularStudentIds.has(String(student._id));
-                  const isRegular = !isAtRisk && !isIrregular;
+                  const isAtRisk = student.behaviorCategory === "At-Risk";
+                  const isIrregular = student.behaviorCategory === "Irregular";
+                  const isRegular = student.behaviorCategory === "Regular";
 
                   return (
                 <div
