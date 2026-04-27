@@ -169,6 +169,57 @@ export const fetchDashboardSummary = async (token) => {
     return data;
 };
 
+export const fetchBehaviorClassification = async (token) => {
+    const response = await fetch(`${BASE_URL}/behavior/classification`, {
+        method: "GET",
+        headers: {
+            Authorization: `${token}`
+        },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Behavior classification fetch failed");
+    }
+
+    return data;
+};
+
+export const fetchBehaviorAlerts = async (token) => {
+    const response = await fetch(`${BASE_URL}/behavior/alerts`, {
+        method: "GET",
+        headers: {
+            Authorization: `${token}`
+        },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Behavior alerts fetch failed");
+    }
+
+    return data;
+};
+
+export const fetchBehaviorScores = async (token) => {
+    const response = await fetch(`${BASE_URL}/behavior/scores`, {
+        method: "GET",
+        headers: {
+            Authorization: `${token}`
+        },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message || "Behavior scores fetch failed");
+    }
+
+    return data;
+};
+
 export const fetchStudentAttendancePercentages = async (token) => {
     const response = await fetch(`${BASE_URL}/attendance/student-percentages`, {
         method: "GET",
