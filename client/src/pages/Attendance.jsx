@@ -19,6 +19,20 @@ const ATTENDANCE_SAVED_TOAST_KEY = "attendanceSavedToast";
 
 const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+const formatMarkedTime = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const parsedDate = new Date(value);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  return parsedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
 const sortByRollNo = (students) =>
   [...students].sort((firstStudent, secondStudent) =>
     firstStudent.rollNo.localeCompare(secondStudent.rollNo, undefined, {
@@ -75,6 +89,7 @@ export default function Attendance() {
                 rollNo: student.rollNo,
                 status: "Absent",
                 time: null,
+                markedAt: null,
               }))
             )
           : [];
@@ -83,15 +98,24 @@ export default function Attendance() {
           const attendanceMap = new Map(
             attendanceResponse.records.map((record) => [
               String(record.studentId?._id || record.studentId),
-              record.status,
+              {
+                status: record.status,
+                markedAt: record.markedAt,
+              },
             ])
           );
 
           setStudents(
-            baseStudents.map((student) => ({
-              ...student,
-              status: attendanceMap.get(student.id) || "Absent",
-            }))
+            baseStudents.map((student) => {
+              const attendanceRecord = attendanceMap.get(student.id);
+
+              return {
+                ...student,
+                status: attendanceRecord?.status || "Absent",
+                markedAt: attendanceRecord?.markedAt || null,
+                time: formatMarkedTime(attendanceRecord?.markedAt),
+              };
+            })
           );
         } else {
           setStudents(baseStudents);
@@ -155,17 +179,33 @@ export default function Attendance() {
 
   const setStatus = (id, status) => {
     setStudents((prev) =>
-      prev.map((student) =>
-        student.id === id
-          ? { ...student, status, time: student.status === status ? student.time : now() }
-          : student
-      )
+      prev.map((student) => {
+        if (student.id !== id) {
+          return student;
+        }
+
+        const markedAt = new Date().toISOString();
+
+        return {
+          ...student,
+          status,
+          markedAt,
+          time: formatMarkedTime(markedAt) || now(),
+        };
+      })
     );
   };
 
   const markAllPresent = () => {
+    const markedAt = new Date().toISOString();
+
     setStudents((prev) =>
-      prev.map((student) => ({ ...student, status: "Present", time: student.time || now() }))
+      prev.map((student) => ({
+        ...student,
+        status: "Present",
+        markedAt,
+        time: formatMarkedTime(markedAt) || now(),
+      }))
     );
   };
 
@@ -193,6 +233,7 @@ export default function Attendance() {
         records: students.map((student) => ({
           studentId: student.id,
           status: student.status || "Absent",
+          markedAt: student.markedAt || new Date().toISOString(),
         })),
       };
 
@@ -305,11 +346,20 @@ export default function Attendance() {
       }
 
       setStudents((prev) =>
-        prev.map((student) =>
-          student.id === result.student._id
-            ? { ...student, status: "Present", time: now() }
-            : student
-        )
+        prev.map((student) => {
+          if (student.id !== result.student._id) {
+            return student;
+          }
+
+          const markedAt = new Date().toISOString();
+
+          return {
+            ...student,
+            status: "Present",
+            markedAt,
+            time: formatMarkedTime(markedAt) || now(),
+          };
+        })
       );
 
       setResultMessage(result.message || `Attendance marked for ${result.student.name}`);
