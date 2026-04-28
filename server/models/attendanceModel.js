@@ -13,6 +13,10 @@ const attendanceRecordSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
+        markedAt: {
+            type: Date,
+            default: Date.now,
+        },
     },
     {
         _id: false,
