@@ -14,6 +14,15 @@ const normalizeDate = (value) => {
     return parsedDate;
 };
 
+const normalizeMarkedAt = (value) => {
+    if (!value) {
+        return new Date();
+    }
+
+    const parsedDate = new Date(value);
+    return Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+};
+
 const saveAttendanceByDate = async (req, res) => {
     try {
         const { date, records } = req.body;
@@ -54,9 +63,15 @@ const saveAttendanceByDate = async (req, res) => {
             return res.status(400).json({ message: 'One or more students were not found' });
         }
 
+        const recordsWithMarkedAt = records.map((record) => ({
+            studentId: record.studentId,
+            status: record.status,
+            markedAt: normalizeMarkedAt(record.markedAt),
+        }));
+
         const attendance = await Attendance.findOneAndUpdate(
             { date: normalizedDate },
-            { date: normalizedDate, records },
+            { date: normalizedDate, records: recordsWithMarkedAt },
             {
                 returnDocument: 'after',
                 upsert: true,
@@ -122,6 +137,7 @@ const getAttendanceByStudent = async (req, res) => {
                 date: entry.date,
                 studentId,
                 status: record?.status || null,
+                markedAt: record?.markedAt || null,
             };
         });
 
@@ -334,7 +350,7 @@ const recognizeFaceAndMarkAttendance = async (req, res) => {
         if (!attendance) {
             const created = await Attendance.create({
                 date: normalizedDate,
-                records: [{ studentId: matchedStudent._id, status: markStatus }],
+                records: [{ studentId: matchedStudent._id, status: markStatus, markedAt: new Date() }],
             });
 
             await created.populate('records.studentId', 'name rollNo email department');
@@ -357,10 +373,12 @@ const recognizeFaceAndMarkAttendance = async (req, res) => {
 
         if (recordIndex >= 0) {
             attendance.records[recordIndex].status = markStatus;
+            attendance.records[recordIndex].markedAt = new Date();
         } else {
             attendance.records.push({
                 studentId: matchedStudent._id,
                 status: markStatus,
+                markedAt: new Date(),
             });
         }
 
