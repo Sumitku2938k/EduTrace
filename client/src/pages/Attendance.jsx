@@ -19,6 +19,32 @@ const ATTENDANCE_SAVED_TOAST_KEY = "attendanceSavedToast";
 
 const now = () => new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
+const PHONE_CAMERA_KEYWORDS = [
+  "phone",
+  "link to windows",
+  "windows link",
+  "phone link",
+  "mobile",
+  "android",
+  "iphone",
+  "droidcam",
+  "iriun",
+  "continuity",
+];
+
+const LAPTOP_CAMERA_KEYWORDS = [
+  "integrated",
+  "built-in",
+  "builtin",
+  "internal",
+  "webcam",
+  "hd camera",
+  "truevision",
+  "easycamera",
+  "facetime",
+  "camera",
+];
+
 const formatMarkedTime = (value) => {
   if (!value) {
     return null;
@@ -40,6 +66,58 @@ const sortByRollNo = (students) =>
       sensitivity: "base",
     }),
   );
+
+const isPhoneCamera = (device) => {
+  const label = device.label.toLowerCase();
+  return PHONE_CAMERA_KEYWORDS.some((keyword) => label.includes(keyword));
+};
+
+const getPreferredLaptopCamera = async () => {
+  const devices = await navigator.mediaDevices.enumerateDevices();
+  const videoDevices = devices.filter((device) => device.kind === "videoinput");
+  const nonPhoneCameras = videoDevices.filter((device) => !isPhoneCamera(device));
+
+  const preferredCamera = nonPhoneCameras.find((device) => {
+    const label = device.label.toLowerCase();
+    return LAPTOP_CAMERA_KEYWORDS.some((keyword) => label.includes(keyword));
+  });
+
+  return preferredCamera || nonPhoneCameras[0] || videoDevices[0] || null;
+};
+
+const getLaptopCameraStream = async () => {
+  let preferredCamera = await getPreferredLaptopCamera();
+
+  if (!preferredCamera?.deviceId) {
+    const permissionStream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+      audio: false,
+    });
+
+    permissionStream.getTracks().forEach((track) => track.stop());
+    preferredCamera = await getPreferredLaptopCamera();
+  }
+
+  if (preferredCamera?.deviceId) {
+    return navigator.mediaDevices.getUserMedia({
+      video: {
+        deviceId: { exact: preferredCamera.deviceId },
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+      audio: false,
+    });
+  }
+
+  return navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: "user",
+      width: { ideal: 1280 },
+      height: { ideal: 720 },
+    },
+    audio: false,
+  });
+};
 
 export default function Attendance() {
   const today = new Date().toISOString().split("T")[0];
@@ -273,10 +351,7 @@ export default function Attendance() {
     }
 
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false,
-      });
+      const mediaStream = await getLaptopCameraStream();
 
       stopCameraStream();
       streamRef.current = mediaStream;
