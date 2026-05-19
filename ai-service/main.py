@@ -20,7 +20,7 @@ class FaceServiceError(Exception):
     def __init__(self, message: str, status_code: int = 400):
         super().__init__(message)
         self.message = message
-        self.status_code = status_code
+        self.status_code = status_code  
 
 # base64 string → actual image  
 def decode_image(image_base64: str) -> np.ndarray:
