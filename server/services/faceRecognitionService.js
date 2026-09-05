@@ -1,5 +1,5 @@
-const FACE_API_BASE_URL = process.env.PYTHON_FACE_API_URL || 'http://127.0.0.1:8001';
-const FACE_API_TIMEOUT_MS = Number(process.env.PYTHON_FACE_API_TIMEOUT_MS || 8000);
+const FACE_API_BASE_URL = (process.env.PYTHON_FACE_API_URL || 'https://edutrace-ai-latest.onrender.com').replace(/\/$/, '');
+const FACE_API_TIMEOUT_MS = Number(process.env.PYTHON_FACE_API_TIMEOUT_MS || 60000);
 
 const toBase64 = (buffer) => buffer.toString('base64');
 
