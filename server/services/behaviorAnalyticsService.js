@@ -1,4 +1,4 @@
-const Attendance = require('../models/AttendanceModel');
+const Attendance = require('../models/attendanceModel');
 const Student = require('../models/Student');
 
 const REGULAR_ATTENDANCE_THRESHOLD = 85;

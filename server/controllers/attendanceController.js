@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Attendance = require('../models/AttendanceModel');
+const Attendance = require('../models/attendanceModel');
 const Student = require('../models/Student');
 const { recognizeFaceFromBuffer } = require('../services/faceRecognitionService');
 
