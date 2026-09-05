@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, UserCheck } from "lucide-react";
 import { loginUser } from "../services/api";
 import { useAuth } from "../utils/auth";
 import { toast } from 'react-toastify';
+
+const DEMO_LOGIN_EMAIL = import.meta.env.VITE_DEMO_LOGIN_EMAIL || "demo@edutrace.app";
+const DEMO_LOGIN_PASSWORD = import.meta.env.VITE_DEMO_LOGIN_PASSWORD || "Demo@12345";
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -13,24 +16,18 @@ const Login = () => {
     const navigate = useNavigate();
     const { storeTokenInLS, storeUserInLS } = useAuth();
 
-    const handleSignIn = async (e) => {
-        e.preventDefault();
+    const submitLogin = async (credentials, successMessage = "Login Successful") => {
         setError("");
         setIsSubmitting(true);
-        
-        const user = { email, password };
-        console.log("User logging in: ", user);
-        //Handling the form submission
+
         try {
-            const res_data = await loginUser(user);
+            const res_data = await loginUser(credentials);
             console.log("Response from Server while login: ", res_data);
-            // Store token and user data (assuming res_data contains token and user object)
-            // Adjust 'res_data.token' and 'res_data.user' based on your actual API response
             storeTokenInLS(res_data.token);
             storeUserInLS(res_data.user);
-                
-            toast.success("Login Successful");
-            navigate("/"); // Redirect to home page after successful login
+
+            toast.success(successMessage);
+            navigate("/");
         } catch (error) {
             console.log("Login Error: ", error);
             setError(error.message || "Unable to sign in. Please try again.");
@@ -38,6 +35,18 @@ const Login = () => {
         } finally {
             setIsSubmitting(false);
         }
+    };
+
+    const handleSignIn = async (e) => {
+        e.preventDefault();
+        await submitLogin({ email, password });
+    };
+
+    const handleDemoLogin = async () => {
+        await submitLogin(
+            { email: DEMO_LOGIN_EMAIL, password: DEMO_LOGIN_PASSWORD },
+            "Demo Login Successful"
+        );
     };
 
     return (
@@ -54,6 +63,22 @@ const Login = () => {
                 <div className="mb-6">
                     <h2 className="text-[24px] font-bold text-[#1a1d2e]">Teacher Login</h2>
                     <p className="text-[14px] text-[#6b7280] mt-1">Enter your credentials to access the dashboard</p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={handleDemoLogin}
+                    disabled={isSubmitting}
+                    className="mb-5 flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 px-4 py-3.25 text-[15px] font-semibold text-white shadow-md shadow-slate-200 transition-all duration-200 hover:bg-[#0f172a] disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+                >
+                    <UserCheck size={18} />
+                    {isSubmitting ? "Logging In..." : "Continue with Demo Login"}
+                </button>
+
+                <div className="mb-5 flex items-center gap-3">
+                    <span className="h-px flex-1 bg-slate-200" />
+                    <span className="text-xs font-medium uppercase text-slate-400">or</span>
+                    <span className="h-px flex-1 bg-slate-200" />
                 </div>
 
                 <form onSubmit={handleSignIn} className="flex flex-col gap-5">

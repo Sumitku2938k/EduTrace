@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from "react";
 import { useEffect } from "react";
+import { BASE_URL } from "../services/api";
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
@@ -34,7 +35,7 @@ export const AuthProvider = ({ children }) => {
         try {
             if (!token) return;
 
-            const response = await fetch(`http://localhost:5000/api/auth/user`, {
+            const response = await fetch(`${BASE_URL}/auth/user`, {
                 method: "GET",
                 headers: {
                     Authorization: authorizationToken,
